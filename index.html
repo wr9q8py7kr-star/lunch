@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   * { font-family: 'Sarabun', sans-serif; }
   body { background: #f5f7fb; }
@@ -517,6 +518,117 @@ function importBackup(e) {
 }
 
 /* ============================================================
+   ★★★ THAI TYPOGRAPHY FIX — kinsoku + justified
+   ============================================================ */
+async function fixThaiTypography(blob) {
+  if (!window.JSZip) {
+    console.warn('JSZip ไม่โหลด — ข้าม Thai fix');
+    return blob;
+  }
+  try {
+    const ab = await blob.arrayBuffer();
+    const zip = await JSZip.loadAsync(ab);
+    let fixCount = 0;
+
+    // ─── document.xml ───────────────────────────────
+    const docFile = zip.file('word/document.xml');
+    if (docFile) {
+      let xml = await docFile.async('string');
+
+      // เพิ่ม kinsoku / overflowPunct / autoSpace ให้ทุก paragraph ที่ยังไม่มี
+      const before1 = xml;
+      xml = xml.replace(
+        /<w:pPr>(?![\s\S]{0,300}?<w:kinsoku)/g,
+        '<w:pPr><w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/>'
+      );
+      if (xml !== before1) fixCount++;
+
+      // เปลี่ยน thaiDistribute → both (justified ปกติ)
+      const before2 = xml;
+      xml = xml.replace(/w:jc w:val="thaiDistribute"/g, 'w:jc w:val="both"');
+      if (xml !== before2) fixCount++;
+
+      // ปิด snapToGrid ในทุก paragraph (ให้ระยะบรรทัดยืดหยุ่น)
+      const before3 = xml;
+      xml = xml.replace(
+        /<w:pPr>([\s\S]{0,200}?)<w:spacing/g,
+        '<w:pPr>$1<w:snapToGrid w:val="0"/><w:spacing'
+      );
+      if (xml !== before3) fixCount++;
+
+      zip.file('word/document.xml', xml);
+    }
+
+    // ─── styles.xml ─────────────────────────────────
+    const stylesFile = zip.file('word/styles.xml');
+    if (stylesFile) {
+      let xml = await stylesFile.async('string');
+
+      // ตั้งภาษาไทยเป็น default
+      if (!/w:bidi="th-TH"/.test(xml)) {
+        const before = xml;
+        // แทนที่ rPrDefault
+        if (/<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/.test(xml)) {
+          xml = xml.replace(
+            /<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/,
+            '<w:rPrDefault><w:rPr><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault>'
+          );
+        } else if (/<w:rPrDefault>\s*<w:rPr>/.test(xml)) {
+          xml = xml.replace(
+            /<w:rPrDefault>\s*<w:rPr>/,
+            '<w:rPrDefault><w:rPr><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/>'
+          );
+        }
+        if (xml !== before) fixCount++;
+      }
+
+      // เพิ่ม kinsoku default ใน docDefaults
+      if (!/<w:kinsoku\/>/.test(xml)) {
+        const before = xml;
+        xml = xml.replace(
+          /<w:pPrDefault>/,
+          '<w:pPrDefault><w:pPr><w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/></w:pPr>'
+        );
+        if (xml !== before) fixCount++;
+      }
+
+      zip.file('word/styles.xml', xml);
+    }
+
+    // ─── settings.xml ───────────────────────────────
+    const settingsFile = zip.file('word/settings.xml');
+    if (settingsFile) {
+      let xml = await settingsFile.async('string');
+      if (!/<w:kinsoku\/>/.test(xml)) {
+        const before = xml;
+        xml = xml.replace(
+          /(<w:settings[^>]*>)/,
+          '$1<w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/><w:noPunctuationKerning/><w:characterSpacingControl w:val="compressPunctuation"/>'
+        );
+        if (xml !== before) fixCount++;
+      }
+      zip.file('word/settings.xml', xml);
+    }
+
+    if (fixCount === 0) {
+      console.log('ℹ️ Thai typography: ไม่มีการเปลี่ยนแปลง');
+      return blob;
+    }
+    console.log(`🇹🇭 Thai typography fixed (${fixCount} หมวด)`);
+
+    return await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+  } catch (e) {
+    console.error('fixThaiTypography failed:', e);
+    return blob;
+  }
+}
+
+/* ============================================================
    DOCX GENERATION
    ============================================================ */
 const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
@@ -539,7 +651,8 @@ function p(text, opts={}) {
   if (opts.before != null) spacing.before = opts.before;
   let align = opts.align;
   if (!align) {
-    if (opts.indent && text && text.length > 40) align = AlignmentType.THAI_DISTRIBUTE;
+    // ★ ใช้ JUSTIFIED แทน THAI_DISTRIBUTE
+    if (opts.indent && text && text.length > 40) align = AlignmentType.JUSTIFIED;
     else align = AlignmentType.LEFT;
   }
   return new Paragraph({
@@ -558,7 +671,8 @@ function pMix(segments, opts={}) {
   let align = opts.align;
   if (!align) {
     const totalLen = segments.reduce((s,x) => s + (x.text||'').length, 0);
-    if (opts.indent && totalLen > 40) align = AlignmentType.THAI_DISTRIBUTE;
+    // ★ ใช้ JUSTIFIED แทน THAI_DISTRIBUTE
+    if (opts.indent && totalLen > 40) align = AlignmentType.JUSTIFIED;
     else align = AlignmentType.LEFT;
   }
   return new Paragraph({
@@ -1228,7 +1342,9 @@ async function exportCurrentDocx() {
       styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
       sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children: d.build() }],
     });
-    const blob = await Packer.toBlob(document);
+    let blob = await Packer.toBlob(document);
+    // ★ Thai typography fix
+    blob = await fixThaiTypography(blob);
     saveAs(blob, `${d.name.replace(/^\d+\.\s*/, '')}.docx`);
     toast('ดาวน์โหลดสำเร็จ');
   } catch(e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
@@ -1248,7 +1364,9 @@ async function exportAllDocs() {
       styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
       sections,
     });
-    const blob = await Packer.toBlob(document);
+    let blob = await Packer.toBlob(document);
+    // ★ Thai typography fix
+    blob = await fixThaiTypography(blob);
     saveAs(blob, `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`);
     toast('ดาวน์โหลดสำเร็จ');
   } catch (e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
