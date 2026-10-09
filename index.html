@@ -162,9 +162,6 @@
 <div id="toast" class="toast"></div>
 
 <script>
-/* ============================================================
-   STATE
-   ============================================================ */
 const STORAGE_KEY = 'school-lunch-v10';
 let garudaBuffer = null;
 
@@ -518,7 +515,7 @@ function importBackup(e) {
 }
 
 /* ============================================================
-   ★★★ THAI TYPOGRAPHY FIX — kinsoku + justified
+   THAI TYPOGRAPHY FIX — kinsoku + LEFT align
    ============================================================ */
 async function fixThaiTypography(blob) {
   if (!window.JSZip) {
@@ -530,12 +527,11 @@ async function fixThaiTypography(blob) {
     const zip = await JSZip.loadAsync(ab);
     let fixCount = 0;
 
-    // ─── document.xml ───────────────────────────────
     const docFile = zip.file('word/document.xml');
     if (docFile) {
       let xml = await docFile.async('string');
 
-      // เพิ่ม kinsoku / overflowPunct / autoSpace ให้ทุก paragraph ที่ยังไม่มี
+      // เพิ่ม kinsoku / overflowPunct / autoSpace ให้ทุก paragraph
       const before1 = xml;
       xml = xml.replace(
         /<w:pPr>(?![\s\S]{0,300}?<w:kinsoku)/g,
@@ -543,12 +539,7 @@ async function fixThaiTypography(blob) {
       );
       if (xml !== before1) fixCount++;
 
-      // เปลี่ยน thaiDistribute → both (justified ปกติ)
-      const before2 = xml;
-      xml = xml.replace(/w:jc w:val="thaiDistribute"/g, 'w:jc w:val="both"');
-      if (xml !== before2) fixCount++;
-
-      // ปิด snapToGrid ในทุก paragraph (ให้ระยะบรรทัดยืดหยุ่น)
+      // ปิด snapToGrid (ให้ระยะบรรทัดยืดหยุ่น)
       const before3 = xml;
       xml = xml.replace(
         /<w:pPr>([\s\S]{0,200}?)<w:spacing/g,
@@ -559,7 +550,6 @@ async function fixThaiTypography(blob) {
       zip.file('word/document.xml', xml);
     }
 
-    // ─── styles.xml ─────────────────────────────────
     const stylesFile = zip.file('word/styles.xml');
     if (stylesFile) {
       let xml = await stylesFile.async('string');
@@ -567,7 +557,6 @@ async function fixThaiTypography(blob) {
       // ตั้งภาษาไทยเป็น default
       if (!/w:bidi="th-TH"/.test(xml)) {
         const before = xml;
-        // แทนที่ rPrDefault
         if (/<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/.test(xml)) {
           xml = xml.replace(
             /<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/,
@@ -582,7 +571,7 @@ async function fixThaiTypography(blob) {
         if (xml !== before) fixCount++;
       }
 
-      // เพิ่ม kinsoku default ใน docDefaults
+      // kinsoku default ใน docDefaults
       if (!/<w:kinsoku\/>/.test(xml)) {
         const before = xml;
         xml = xml.replace(
@@ -595,7 +584,6 @@ async function fixThaiTypography(blob) {
       zip.file('word/styles.xml', xml);
     }
 
-    // ─── settings.xml ───────────────────────────────
     const settingsFile = zip.file('word/settings.xml');
     if (settingsFile) {
       let xml = await settingsFile.async('string');
@@ -651,8 +639,8 @@ function p(text, opts={}) {
   if (opts.before != null) spacing.before = opts.before;
   let align = opts.align;
   if (!align) {
-    // ★ ใช้ JUSTIFIED แทน THAI_DISTRIBUTE
-    if (opts.indent && text && text.length > 40) align = AlignmentType.JUSTIFIED;
+    // ★ ใช้ LEFT เสมอ — ไม่เกลี่ยช่องว่าง
+    if (opts.indent && text && text.length > 40) align = AlignmentType.LEFT;
     else align = AlignmentType.LEFT;
   }
   return new Paragraph({
@@ -671,8 +659,8 @@ function pMix(segments, opts={}) {
   let align = opts.align;
   if (!align) {
     const totalLen = segments.reduce((s,x) => s + (x.text||'').length, 0);
-    // ★ ใช้ JUSTIFIED แทน THAI_DISTRIBUTE
-    if (opts.indent && totalLen > 40) align = AlignmentType.JUSTIFIED;
+    // ★ ใช้ LEFT เสมอ
+    if (opts.indent && totalLen > 40) align = AlignmentType.LEFT;
     else align = AlignmentType.LEFT;
   }
   return new Paragraph({
@@ -834,7 +822,6 @@ function buildPeriodSummary() {
   })];
 }
 
-/* ---------- Documents ---------- */
 function docTOR_Assignment() {
   const s = state.settings;
   const total = s.studentCount * s.pricePerStudent * s.totalDays;
@@ -1256,7 +1243,7 @@ function buildHTMLPreview(id) {
     }).join('');
     return `<table border="1" style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="padding:4px">งวด</th><th>ระยะเวลา</th><th>จำนวนวัน</th><th>จำนวนเงิน</th></tr>${rows}</table>`;
   };
-  const di = 'text-indent:2.5em;text-align:justify;margin-top:6px';
+  const di = 'text-indent:2.5em;text-align:left;margin-top:6px';
   switch(id) {
     case 'assign_tor': return `${memoHead}
       <p>ส่วนราชการ  ${s.schoolName}</p>${rowLR(`ที่  ${toThaiDigits(190)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`)}
@@ -1343,7 +1330,6 @@ async function exportCurrentDocx() {
       sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children: d.build() }],
     });
     let blob = await Packer.toBlob(document);
-    // ★ Thai typography fix
     blob = await fixThaiTypography(blob);
     saveAs(blob, `${d.name.replace(/^\d+\.\s*/, '')}.docx`);
     toast('ดาวน์โหลดสำเร็จ');
@@ -1365,7 +1351,6 @@ async function exportAllDocs() {
       sections,
     });
     let blob = await Packer.toBlob(document);
-    // ★ Thai typography fix
     blob = await fixThaiTypography(blob);
     saveAs(blob, `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`);
     toast('ดาวน์โหลดสำเร็จ');
