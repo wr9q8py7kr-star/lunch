@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   * { font-family: 'Sarabun', sans-serif; }
   body { background: #f5f7fb; }
@@ -43,7 +42,6 @@
       <button class="nav-item w-full text-left px-4 py-2.5 rounded-lg hover:bg-slate-100" data-page="periods">📆 ตั้งค่างวด</button>
       <button class="nav-item w-full text-left px-4 py-2.5 rounded-lg hover:bg-slate-100" data-page="schedule">📅 ตารางอาหาร</button>
       <button class="nav-item w-full text-left px-4 py-2.5 rounded-lg hover:bg-slate-100" data-page="documents">📄 เอกสารจัดจ้าง</button>
-      <button class="nav-item w-full text-left px-4 py-2.5 rounded-lg hover:bg-slate-100" data-page="templates">📋 เทมเพลต Word</button>
       <button class="nav-item w-full text-left px-4 py-2.5 rounded-lg hover:bg-slate-100" data-page="help">❓ ช่วยเหลือ</button>
     </nav>
     <div class="p-3 mt-4 text-xs text-slate-400 border-t border-slate-200"><p>บันทึกอัตโนมัติ</p><p class="mt-1" id="saveStatus">✓ พร้อมใช้งาน</p></div>
@@ -63,6 +61,7 @@
             <div class="space-y-2">
               <button onclick="goPage('periods')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg">📆 ตั้งค่างวด</button>
               <button onclick="shuffleAll()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg">🎲 สุ่มตารางอาหาร</button>
+              <button onclick="exportAllDocs()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg">📦 ดาวน์โหลดเอกสารรวม 12 ฉบับ</button>
               <button onclick="exportBackup()" class="w-full bg-slate-100 hover:bg-slate-200 py-2.5 rounded-lg">💾 สำรองข้อมูล JSON</button>
               <button onclick="document.getElementById('importFile').click()" class="w-full bg-slate-100 hover:bg-slate-200 py-2.5 rounded-lg">📂 โหลดข้อมูล JSON</button>
               <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)" />
@@ -130,58 +129,20 @@
       <section id="page-documents" class="page">
         <div class="flex items-center justify-between mb-6 flex-wrap gap-3 no-print">
           <h2 class="text-2xl font-bold text-slate-800">เอกสารจัดจ้าง</h2>
-          <div class="flex gap-2 flex-wrap"><button onclick="generateFromMaster()" class="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium">📋 สร้างจาก Master</button><button onclick="window.print()" class="px-4 py-2 bg-slate-100 rounded-lg">🖨️ พิมพ์</button></div>
+          <div class="flex gap-2 flex-wrap"><button onclick="exportAllDocs()" class="px-4 py-2 bg-green-600 text-white rounded-lg font-medium">📦 ดาวน์โหลดเอกสารรวม 12 ฉบับ</button><button onclick="window.print()" class="px-4 py-2 bg-slate-100 rounded-lg">🖨️ พิมพ์</button></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div id="docList" class="md:col-span-1 space-y-2 no-print"></div>
           <div class="md:col-span-1 lg:col-span-2">
             <div class="bg-white rounded-xl border border-slate-200 p-4">
-              <div class="flex justify-between mb-3 no-print flex-wrap gap-2">
+              <div class="flex justify-between mb-3 no-print">
                 <h3 class="font-semibold" id="previewTitle">เลือกเอกสาร</h3>
-                <div class="flex gap-2 flex-wrap"><button onclick="generateFromMaster()" class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg">📋 สร้างจาก Master</button><button onclick="window.print()" class="px-3 py-1.5 text-sm bg-slate-100 rounded-lg">🖨️</button></div>
+                <div class="flex gap-2"><button onclick="exportCurrentDocx()" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg">⬇ Word</button><button onclick="window.print()" class="px-3 py-1.5 text-sm bg-slate-100 rounded-lg">🖨️</button></div>
               </div>
               <div id="docPreview" class="doc-preview"></div>
             </div>
           </div>
         </div>
-      </section>
-      <section id="page-templates" class="page">
-        <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <div>
-            <h2 class="text-2xl font-bold text-slate-800">📋 จัดการเทมเพลต Word</h2>
-            <p class="text-sm text-slate-500 mt-1">เทมเพลตใช้เฉพาะแท็ก <code class="bg-slate-100 px-1 rounded">{varName}</code> — ไม่มี FOR loop (ทำงานได้แน่นอน)</p>
-          </div>
-          <div class="flex gap-2 flex-wrap">
-            <button onclick="clearAllTemplates()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg">🗑️ ลบทั้งหมด</button>
-          </div>
-        </div>
-
-        <div class="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-4 text-sm">
-          <p class="font-semibold text-green-900 mb-1">✓ วิธีใหม่ — ใช้ได้แน่นอน 100%</p>
-          <ul class="list-disc list-inside space-y-1 text-green-800">
-            <li>ไม่มี FOR loop — ปัญหา Unterminated FOR หายไปเลย</li>
-            <li>รายการที่ซ้ำ (อาหาร, งวดงาน) → ใช้ <code>{scheduleText}</code> <code>{periodsText}</code> ที่ระบบสร้างให้</li>
-            <li>คุณสามารถจัดรูปแบบ paragraph ที่มีแท็กได้ตามต้องการ</li>
-          </ul>
-        </div>
-
-        <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-5 mb-6">
-          <div class="flex items-start justify-between gap-3 flex-wrap">
-            <div class="flex-1 min-w-[250px]">
-              <h3 class="font-bold text-purple-900 text-lg">🎯 Master Template</h3>
-              <p class="text-xs text-purple-600 mt-2" id="masterTemplateStatus">ยังไม่มี Master Template</p>
-            </div>
-            <div class="flex gap-2 flex-wrap">
-              <input type="file" id="masterUpload" accept=".docx" class="hidden" onchange="uploadMasterTemplate(event)" />
-              <button onclick="document.getElementById('masterUpload').click()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">📤 อัปโหลด Master</button>
-              <button onclick="downloadMasterStarter()" class="px-4 py-2 bg-white border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 font-medium">📥 Master Starter</button>
-              <button onclick="generateFromMaster()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">✨ สร้างเอกสารรวม</button>
-              <button onclick="removeMasterTemplate()" class="px-3 py-2 bg-red-100 text-red-700 rounded-lg">🗑️</button>
-            </div>
-          </div>
-        </div>
-
-        <div id="templateStatus" class="mb-4"></div>
       </section>
       <section id="page-help" class="page">
         <h2 class="text-2xl font-bold text-slate-800 mb-6">ช่วยเหลือ</h2>
@@ -190,8 +151,7 @@
             <li>ตั้งค่าโครงการ + อัปโหลดตราครุฑ</li>
             <li>ไปที่ <b>📆 ตั้งค่างวด</b> — เลือกงวด → คลิกวันที่</li>
             <li>ไปที่ <b>📅 ตารางอาหาร</b> — กด 🎲 สุ่มใหม่</li>
-            <li>ไปที่ <b>📋 เทมเพลต Word</b> — กด Master Starter → แก้ใน Word → อัปโหลดกลับ</li>
-            <li>กด <b>✨ สร้างเอกสารรวม</b></li>
+            <li>ไปที่ <b>📄 เอกสารจัดจ้าง</b> — ดาวน์โหลด Word</li>
           </ol>
         </div>
       </section>
@@ -200,39 +160,11 @@
 </div>
 <div id="toast" class="toast"></div>
 
-<script type="module">
-  window.__docxTemplatesReady = (async () => {
-    const urls = [
-      'https://unpkg.com/@n0uur/docx-templates-fork/lib/browser.js',
-      'https://cdn.jsdelivr.net/npm/@n0uur/docx-templates-fork/lib/browser.js',
-      'https://unpkg.com/docx-templates/lib/browser.js',
-      'https://cdn.jsdelivr.net/npm/docx-templates/lib/browser.js',
-    ];
-    for (const url of urls) {
-      try {
-        const mod = await import(url);
-        const fn = mod.createReport || (mod.default && mod.default.createReport);
-        if (fn) {
-          window.createReport = fn;
-          console.log('✅ Loaded docx-templates from:', url);
-          window.dispatchEvent(new Event('docx-templates-ready'));
-          return true;
-        }
-      } catch (e) {
-        console.warn('✗', url, '-', e.message);
-      }
-    }
-    console.error('❌ โหลด docx-templates ไม่สำเร็จ');
-    window.dispatchEvent(new Event('docx-templates-failed'));
-    return false;
-  })();
-</script>
-
 <script>
 /* ============================================================
    STATE
    ============================================================ */
-const STORAGE_KEY = 'school-lunch-v14';
+const STORAGE_KEY = 'school-lunch-v10';
 let garudaBuffer = null;
 
 const DEFAULT_MENUS = [
@@ -292,7 +224,6 @@ const DEFAULT_STATE = {
   menus: [...DEFAULT_MENUS],
   schedule: [], periodAssignments: {}, activePeriod: 0,
   currentDoc: 'assign_tor', garudaBase64: null,
-  masterTemplate: null,
 };
 
 let state = loadState();
@@ -310,7 +241,6 @@ function loadState() {
       activePeriod: parsed.activePeriod != null ? parsed.activePeriod : 0,
       currentDoc: parsed.currentDoc || 'assign_tor',
       garudaBase64: parsed.garudaBase64 || null,
-      masterTemplate: parsed.masterTemplate || null,
     };
   } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
 }
@@ -354,15 +284,12 @@ function goPage(name) {
   if (name === 'documents') renderDocuments();
   if (name === 'dashboard') updateDashboard();
   if (name === 'periods') renderPeriods();
-  if (name === 'templates') renderTemplates();
 }
 document.querySelectorAll('.nav-item').forEach(b => { b.onclick = () => goPage(b.dataset.page); });
 
-async function tryFetchBuffer(url) { try { const r = await fetch(url, { cache:'force-cache' }); if (!r.ok) return null; return await r.arrayBuffer(); } catch(e){ return null; } }
 function base64ToArrayBuffer(dataUrl) { const b64 = dataUrl.split(',')[1] || dataUrl; const bin = atob(b64); const bytes = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i); return bytes.buffer; }
 async function loadGaruda() {
   if (state.garudaBase64) { try { garudaBuffer = base64ToArrayBuffer(state.garudaBase64); return true; } catch(e){} }
-  let buf = await tryFetchBuffer('garuda.png'); if (buf) { garudaBuffer = buf; return true; }
   garudaBuffer = null; return false;
 }
 function handleGarudaUpload(e) {
@@ -585,13 +512,155 @@ function exportBackup() { const b = new Blob([JSON.stringify(state,null,2)],{typ
 function importBackup(e) {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
-  r.onload = async () => { try { const d = JSON.parse(r.result); state = {...state, ...d}; saveState(); await loadGaruda(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus(); renderGarudaPreview(); renderTemplates(); toast('โหลดสำเร็จ'); } catch(err) { toast('ไฟล์ไม่ถูกต้อง', true); } };
+  r.onload = async () => { try { const d = JSON.parse(r.result); state = {...state, ...d}; saveState(); await loadGaruda(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus(); renderGarudaPreview(); toast('โหลดสำเร็จ'); } catch(err) { toast('ไฟล์ไม่ถูกต้อง', true); } };
   r.readAsText(f); e.target.value = '';
 }
 
 /* ============================================================
-   ★★★ TEMPLATE DATA — เพิ่ม xxxText fields ★★★
+   DOCX GENERATION
    ============================================================ */
+const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
+  WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign } = docx;
+
+const FONT = 'TH Sarabun IT9';
+const FS = 32;
+const LINE = 276;
+const INDENT = 720;
+const GARUDA_MEMO_SIZE = 45;
+const GARUDA_CENTER_SIZE = 113;
+
+const NB = { style: BorderStyle.NONE, size: 0, color: 'auto' };
+const NONE_BORDERS = { top: NB, bottom: NB, left: NB, right: NB };
+const NONE_TABLE = { top: NB, bottom: NB, left: NB, right: NB, insideHorizontal: NB, insideVertical: NB };
+
+function p(text, opts={}) {
+  const spacing = { line: LINE };
+  if (opts.after != null) spacing.after = opts.after;
+  if (opts.before != null) spacing.before = opts.before;
+  let align = opts.align;
+  if (!align) {
+    if (opts.indent && text && text.length > 40) align = AlignmentType.THAI_DISTRIBUTE;
+    else align = AlignmentType.LEFT;
+  }
+  return new Paragraph({
+    alignment: align,
+    spacing,
+    indent: opts.indent,
+    tabStops: opts.tabStops,
+    keepNext: !!opts.keepNext,
+    children: [new TextRun({ text: text || '', bold: !!opts.bold, italics: !!opts.italic, size: opts.size || FS, font: FONT })],
+  });
+}
+function pMix(segments, opts={}) {
+  const spacing = { line: LINE };
+  if (opts.after != null) spacing.after = opts.after;
+  if (opts.before != null) spacing.before = opts.before;
+  let align = opts.align;
+  if (!align) {
+    const totalLen = segments.reduce((s,x) => s + (x.text||'').length, 0);
+    if (opts.indent && totalLen > 40) align = AlignmentType.THAI_DISTRIBUTE;
+    else align = AlignmentType.LEFT;
+  }
+  return new Paragraph({
+    alignment: align,
+    spacing,
+    indent: opts.indent,
+    keepNext: !!opts.keepNext,
+    children: segments.map(seg => new TextRun({
+      text: seg.text || '',
+      bold: !!seg.bold,
+      italics: !!seg.italic,
+      size: opts.size || FS,
+      font: FONT,
+    })),
+  });
+}
+function hr(after=120) {
+  return new Paragraph({
+    spacing:{ line: LINE, after },
+    border:{ bottom:{ color:'000000', space:1, style:BorderStyle.SINGLE, size:6 } },
+    keepNext: true,
+    children:[new TextRun({ text:'', font:FONT, size:2 })],
+  });
+}
+function garudaCenter() {
+  if (!garudaBuffer) return p(' ', { align: AlignmentType.CENTER });
+  return new Paragraph({ alignment: AlignmentType.CENTER, spacing:{ line: LINE, after: 0 }, keepNext: true,
+    children: [new ImageRun({ data: garudaBuffer, transformation: { width: GARUDA_CENTER_SIZE, height: GARUDA_CENTER_SIZE } })] });
+}
+function memoHeaderRow() {
+  const garudaCell = new TableCell({
+    width: { size: 20, type: WidthType.PERCENTAGE }, borders: NONE_BORDERS,
+    verticalAlign: VerticalAlign.TOP,
+    children: [garudaBuffer
+      ? new Paragraph({ alignment: AlignmentType.LEFT, spacing: { line: LINE, after: 0 }, keepNext: true,
+          children: [new ImageRun({ data: garudaBuffer, transformation: { width: GARUDA_MEMO_SIZE, height: GARUDA_MEMO_SIZE } })] })
+      : new Paragraph({ spacing: { line: LINE }, children: [new TextRun({ text: '', font: FONT, size: FS })] }),
+    ],
+  });
+  const memoTextCell = new TableCell({
+    width: { size: 80, type: WidthType.PERCENTAGE }, borders: NONE_BORDERS,
+    verticalAlign: VerticalAlign.TOP,
+    children: [new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE, before: 0, after: 0 }, keepNext: true,
+      children: [new TextRun({ text: 'บันทึกข้อความ', bold: true, size: 36, font: FONT })] })],
+  });
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE }, borders: NONE_TABLE,
+    rows: [new TableRow({ cantSplit: true, children: [garudaCell, memoTextCell] })],
+  });
+}
+function rowLR(left, right, tabPos=6200) {
+  return new Paragraph({
+    spacing:{ line: LINE },
+    tabStops: [{ type: TabStopType.LEFT, position: tabPos }],
+    keepNext: true,
+    children: [ new TextRun({ text: left, font:FONT, size:FS }), new TextRun({ text: '\t' + right, font:FONT, size:FS }) ],
+  });
+}
+function headUnderline(label, value) {
+  return new Paragraph({
+    spacing:{ line: LINE },
+    border:{ bottom:{ color:'000000', space:1, style:BorderStyle.SINGLE, size:6 } },
+    keepNext: true,
+    children: [ new TextRun({ text: label + '  ', font:FONT, size:FS }), new TextRun({ text: value, font:FONT, size:FS }) ],
+  });
+}
+function twoSig(L, R) {
+  const mk = (lines) => new TableCell({
+    width:{ size:50, type:WidthType.PERCENTAGE }, borders:NONE_BORDERS,
+    verticalAlign: VerticalAlign.TOP,
+    children: lines.map(t => new Paragraph({ alignment:AlignmentType.CENTER, spacing:{line:LINE},
+      children:[new TextRun({ text:t, font:FONT, size:FS })] }))
+  });
+  return new Table({ width:{ size:100, type:WidthType.PERCENTAGE }, borders:NONE_TABLE,
+    rows:[new TableRow({ cantSplit: true, children:[mk(L), mk(R)] })] });
+}
+function sigR(name, position, date) {
+  const line1 = position ? `ลงชื่อ ...................................................${position}` : 'ลงชื่อ ...................................................';
+  const arr = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE, before: 360 }, keepNext: true,
+      children: [new TextRun({ text: line1, font: FONT, size: FS })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: !!date,
+      children: [new TextRun({ text: `(${name})`, font: FONT, size: FS })] }),
+  ];
+  if (date) arr.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE },
+    children: [new TextRun({ text: date, font: FONT, size: FS })] }));
+  return arr;
+}
+function sigC(name, position, date) {
+  const arr = [
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE, before: 360 }, keepNext: true,
+      children: [new TextRun({ text: 'ลงชื่อ ...................................................', font: FONT, size: FS })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: !!(position || date),
+      children: [new TextRun({ text: `(${name})`, font: FONT, size: FS })] }),
+  ];
+  if (position) arr.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: !!date,
+    children: [new TextRun({ text: position, font: FONT, size: FS })] }));
+  if (date) arr.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE },
+    children: [new TextRun({ text: date, font: FONT, size: FS })] }));
+  return arr;
+}
+
 function menuLine(it) {
   const parts = [it.main];
   if (it.veg && !it.main.includes(it.veg)) parts.push(it.veg);
@@ -599,486 +668,431 @@ function menuLine(it) {
   if (it.fruit) parts.push(it.fruit);
   return parts.join(' + ');
 }
-
-function buildTemplateData() {
-  const s = state.settings;
-  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+function buildMenuTables() {
+  if (!state.schedule.length) return [p('(ยังไม่มีตารางอาหาร)', { align: AlignmentType.CENTER })];
   const groups = [[],[],[],[],[]];
   state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
-
-  // ★ scheduleText — ข้อความอาหารทั้งหมด (บรรทัดคั่นด้วย \n)
-  const scheduleText = state.schedule.map(it =>
-    `${toThaiDateShort(it.date)}  |  ${menuLine(it)}`
-  ).join('\n');
-
-  // ★ scheduleTextByPeriod — แยกตามงวด
-  const scheduleTextByPeriod = groups.map((items, i) => {
-    if (!items.length) return '';
-    return `--- งวดที่ ${toThaiDigits(i+1)} ---\n` + items.map(it =>
-      `${toThaiDateShort(it.date)}  |  ${menuLine(it)}`
-    ).join('\n');
-  }).filter(Boolean).join('\n\n');
-
-  // ★ periodsText — ข้อความงวดงาน
-  const periodsText = groups.map((items, i) => {
-    if (!items.length) return '';
-    const amount = items.length * s.studentCount * s.pricePerStudent;
-    return `งวดที่ ${toThaiDigits(i+1)}  |  ${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}  |  ${toThaiDigits(items.length)} วัน  |  ${thMoney(amount)} บาท`;
-  }).filter(Boolean).join('\n');
-
-  // ★ committeeTextDays — กรรมการ + วัน
-  const committeeTextDays = state.committee.map((c, i) =>
-    `${toThaiDigits(i+1)}. ${c.name}  |  ${c.days || '-'}`
-  ).join('\n');
-
-  // ★ committeeTextRoles — กรรมการ + บทบาท
-  const committeeTextRoles = state.committee.map((c, i) =>
-    `${toThaiDigits(i+1)}. ${c.name}  |  ${c.position}  |  ${c.role}`
-  ).join('\n');
-
-  return {
-    schoolName: s.schoolName,
-    educationArea: s.educationArea,
-    address: s.address,
-    directorName: s.directorName,
-    year: toThaiDigits(s.year),
-    yearRaw: s.year,
-    semester: toThaiDigits(s.semester),
-    studentCount: toThaiDigits(s.studentCount),
-    pricePerStudent: toThaiDigits(s.pricePerStudent),
-    totalDays: toThaiDigits(s.totalDays),
-    issueDate: toThaiDate(s.issueDate),
-    startDate: toThaiDate(s.startDate),
-    endDate: toThaiDate(s.endDate),
-    procurementMethod: s.procurementMethod,
-    torAuthor: s.torAuthor,
-    torAuthorPosition: s.torAuthorPosition,
-    procurementOfficer: s.procurementOfficer,
-    chiefOfficer: s.chiefOfficer,
-    contractorName: s.contractorName,
-    contractorId: toThaiDigits(s.contractorId),
-    contractorAddress: toThaiDigits(s.contractorAddress),
-    contractorPhone: toThaiDigits(s.contractorPhone),
-    totalBudget: thMoney(total),
-    totalBudgetThai: formatMoneyThai(total),
-    docNumberAssign: toThaiDigits(190),
-    docNumberMemo: toThaiDigits(191),
-    docNumberReport: toThaiDigits(192),
-    docNumberApproval: toThaiDigits(193),
-    docNumberOrder48: toThaiDigits(48),
-    docNumberOrder49: toThaiDigits(49),
-    docNumberPO: toThaiDigits(69),
-    // ★ Pre-formatted text fields
-    scheduleText,
-    scheduleTextByPeriod,
-    periodsText,
-    committeeTextDays,
-    committeeTextRoles,
-  };
-}
-
-function renderTemplates() {
-  const status = document.getElementById('templateStatus');
-  if (!status) return;
-
-  const mStatus = document.getElementById('masterTemplateStatus');
-  if (mStatus) {
-    if (state.masterTemplate) {
-      mStatus.innerHTML = `<span class="font-semibold">✓ ${state.masterTemplate.fileName}</span>`;
-      mStatus.className = 'text-xs text-green-700 mt-2 font-medium';
-    } else {
-      mStatus.textContent = 'ยังไม่มี Master Template';
-      mStatus.className = 'text-xs text-purple-600 mt-2';
-    }
-  }
-
-  if (!window.createReport) {
-    status.innerHTML = `<div class="bg-yellow-50 border border-yellow-300 rounded-xl p-3 text-sm text-yellow-800">⏳ กำลังโหลดไลบรารี...</div>`;
-  } else {
-    status.innerHTML = `<div class="bg-green-50 border border-green-300 rounded-xl p-3 text-sm text-green-800">✓ ไลบรารีพร้อมใช้งาน (ใช้ pre-formatted text — ไม่มี FOR loop)</div>`;
-  }
-}
-
-async function uploadMasterTemplate(e) {
-  const f = e.target.files[0]; if (!f) return;
-  if (f.size > 3 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 3 MB', true); return; }
-  if (!f.name.toLowerCase().endsWith('.docx')) { toast('ต้องเป็น .docx', true); return; }
-  const r = new FileReader();
-  r.onload = () => { state.masterTemplate = { fileName: f.name, base64: r.result.split(',')[1] }; saveState(); renderTemplates(); toast('อัปโหลด Master สำเร็จ'); };
-  r.readAsDataURL(f); e.target.value = '';
-}
-function removeMasterTemplate() { if (!confirm('ลบ Master?')) return; state.masterTemplate = null; saveState(); renderTemplates(); toast('ลบแล้ว'); }
-function clearAllTemplates() { if (!confirm('ลบทั้งหมด?')) return; state.masterTemplate = null; saveState(); renderTemplates(); toast('ลบทั้งหมดแล้ว'); }
-
-async function generateFromMaster() {
-  if (!window.createReport) { toast('ไลบรารียังโหลดไม่เสร็จ', true); return; }
-  if (!state.masterTemplate) { toast('ยังไม่มี Master Template', true); return; }
-  try {
-    toast('กำลัง fix template...');
-    const originalBuffer = base64ToArrayBuffer(state.masterTemplate.base64);
-    const buffer = await fixWordTemplate(originalBuffer);
-
-    toast('กำลังสร้างเอกสารรวม...');
-    const report = await window.createReport({
-      template: buffer,
-      data: buildTemplateData(),
-      cmdDelimiter: ['{', '}'],
-      literalXmlDelimiter: '||',
-      processLineBreaks: true,
-      noSandbox: false,
-      rejectNullish: false,
-      failFast: false,
-    });
-
-    const blob = new Blob([report], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-    const s = state.settings;
-    saveAs(blob, `เอกสารรวม_${s.schoolName}_${s.year}.docx`);
-    toast('✓ สร้างสำเร็จ');
-  } catch (e) {
-    console.error('ERROR:', e);
-    let detail = 'ไม่ทราบสาเหตุ';
-    if (typeof e === 'string') detail = e;
-    else if (Array.isArray(e) && e[0]?.message) detail = e[0].message;
-    else if (e?.message) detail = e.message;
-    else try { detail = JSON.stringify(e); } catch(_) {}
-    alert('ERROR:\n\n' + detail);
-    toast('Error: ' + detail, true);
-  }
-}
-
-/* fixWordTemplate — แค่ fix autocorrect ไม่ต้อง merge runs */
-async function fixWordTemplate(arrayBuffer) {
-  if (!window.JSZip) return arrayBuffer;
-  try {
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    const docFile = zip.file('word/document.xml');
-    if (!docFile) return arrayBuffer;
-    let xml = await docFile.async('string');
-    const original = xml;
-
-    xml = xml.replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '');
-    xml = xml.replace(/\u00A0/g, ' ');
-    xml = xml.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-
-    if (xml === original) { console.log('✅ ไม่มีปัญหา autocorrect'); return arrayBuffer; }
-    console.log('🔧 Fixed autocorrect');
-
-    zip.file('word/document.xml', xml);
-    return await zip.generateAsync({
-      type: 'arraybuffer',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 },
-      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    });
-  } catch (e) { return arrayBuffer; }
-}
-
-/* ============================================================
-   TEMPLATE BUILDER — ใช้แค่ {varName} ไม่มี FOR
-   ============================================================ */
-function buildDocTemplate(docId) {
   const out = [];
-  const P = (text, opts = {}) => new Paragraph({
-    alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
-    spacing: { line: LINE, after: opts.after != null ? opts.after : 60 },
-    indent: opts.indent ? { firstLine: INDENT } : undefined,
-    children: [new TextRun({ text, bold: !!opts.bold, size: opts.size || FS, font: FONT })],
+  groups.forEach((items, idx) => {
+    if (!items.length) return;
+    out.push(p(`รายการอาหารกลางวันในโรงเรียน  ประจำงวดที่ ${toThaiDigits(idx+1)}`, { align: AlignmentType.CENTER, bold: true, before: 120, after: 60, keepNext: true }));
+    out.push(new Table({
+      width:{ size:100, type:WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ tableHeader: true, cantSplit: true, children: [
+          new TableCell({ width:{ size:22, type:WidthType.PERCENTAGE }, children:[p('วัน เดือน ปี', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{ size:78, type:WidthType.PERCENTAGE }, children:[p('รายการอาหาร', { align: AlignmentType.CENTER, bold: true })] }),
+        ]}),
+        ...items.map(it => new TableRow({ cantSplit: true, children: [
+          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(toThaiDateShort(it.date))] }),
+          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(menuLine(it))] }),
+        ]})),
+      ],
+    }));
   });
-
-  switch (docId) {
-    case 'assign_tor':
-      out.push(P('ส่วนราชการ  {schoolName}'));
-      out.push(P('ที่  {docNumberAssign} / {year}          วันที่  {issueDate}'));
-      out.push(P('เรื่อง  แต่งตั้งผู้จัดทำร่างขอบเขตของงาน (Terms OF Reference : TOR)'));
-      out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
-      out.push(P('ด้วย{schoolName} สังกัด{educationArea} ได้อนุมัติจัดสรรงบประมาณ ... งบประมาณ {totalBudget} บาท ... นั้น', { indent: true }));
-      out.push(P('{torAuthor}  {torAuthorPosition}', { center: true }));
-      out.push(P('โดยมีหน้าที่ จัดทำร่างขอบเขตของงาน ...', { indent: true }));
-      out.push(P('จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ', { indent: true }));
-      out.push(P('ลงชื่อ...............................เจ้าหน้าที่          ลงชื่อ ..............................หัวหน้าเจ้าหน้าที่'));
-      out.push(P('({procurementOfficer})          ({chiefOfficer})'));
-      out.push(P('□ ทราบ          □ อนุมัติ', { center: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      break;
-
-    case 'order_committee':
-      out.push(P('คำสั่ง{schoolName}', { center: true, bold: true, size: 36 }));
-      out.push(P('ที่  {docNumberOrder48} / {year}', { center: true }));
-      out.push(P('เรื่อง  แต่งตั้งคณะกรรมการร่างขอบเขตของงาน (TOR)', { center: true }));
-      out.push(P('─────────────────────────────────────', { center: true }));
-      out.push(P('ด้วย{schoolName} สังกัด{educationArea} ... เป็นเงิน {totalBudget} บาท ...', { indent: true }));
-      out.push(P('ผู้จัดทำร่างขอบเขตของงาน (TOR)', { center: true, bold: true }));
-      out.push(P('{torAuthor}  ตำแหน่ง  {torAuthorPosition}', { center: true }));
-      out.push(P('อำนาจและหน้าที่', { bold: true, indent: true }));
-      out.push(P('จัดทำร่างขอบเขตงาน ...', { indent: true }));
-      out.push(P('ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป', { center: true }));
-      out.push(P('สั่ง ณ วันที่  {issueDate}', { center: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      out.push(P('รับทราบ'));
-      out.push(P('๑. {torAuthor}'));
-      break;
-
-    case 'memo_tor':
-      out.push(P('ส่วนราชการ  {schoolName}'));
-      out.push(P('ที่  {docNumberMemo} / {year}          วันที่  {issueDate}'));
-      out.push(P('เรื่อง  ขอความเห็นชอบการจัดทำขอบเขตของงาน (TOR)'));
-      out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
-      out.push(P('ความเดิม', { bold: true, indent: true }));
-      out.push(P('ตามที่ โรงเรียน{schoolName} ... จำนวนเงิน {totalBudget} บาท ... แล้วนั้น', { indent: true }));
-      out.push(P('ข้อเท็จจริง', { bold: true, indent: true }));
-      out.push(P('ผู้จัดทำขอบเขตของงาน (TOR) ... เสร็จเรียบร้อยแล้ว', { indent: true }));
-      out.push(P('ข้อพิจารณา', { bold: true, indent: true }));
-      out.push(P('จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติขอบเขตของงาน (TOR) ...', { indent: true }));
-      out.push(P('ลงชื่อ ...................................................{torAuthor}', { center: true }));
-      out.push(P('({torAuthor})', { center: true }));
-      out.push(P('□ ทราบ          □ อนุมัติ', { center: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      out.push(P('{issueDate}', { center: true }));
-      break;
-
-    case 'tor':
-      out.push(P('๑. ความเป็นมา', { bold: true }));
-      out.push(P('ตามพระราชบัญญัติการศึกษาแห่งชาติ ... {schoolName} ...', { indent: true }));
-      out.push(P('๒. วัตถุประสงค์', { bold: true }));
-      out.push(P('เพื่อจัดหาบุคคล ... จำนวน {studentCount} คน จำนวน {totalDays} วัน', { indent: true }));
-      out.push(P('๓. คุณสมบัติผู้เสนอราคา', { bold: true }));
-      out.push(P('๓.๑ ...', { indent: true }));
-      out.push(P('๓.๒ ...', { indent: true }));
-      out.push(P('๓.๓ ...', { indent: true }));
-      out.push(P('๓.๔ ...', { indent: true }));
-      out.push(P('๓.๕ ...', { indent: true }));
-      out.push(P('๔. ขอบเขตการดำเนินการ', { bold: true }));
-      out.push(P('ผู้รับจ้าง ... วงเงินไม่เกิน {totalBudget} บาท ({totalBudgetThai})', { indent: true }));
-      out.push(P('รายการอาหาร (แทนที่ {scheduleText} ด้วยรายการอาหารทั้งหมด):', { indent: true }));
-      out.push(P('{scheduleText}', { indent: true }));
-      out.push(P('๕. การส่งมอบพัสดุ', { bold: true }));
-      out.push(P('โรงเรียนกำหนดการส่งมอบงานออกเป็น ๕ งวด:', { indent: true }));
-      out.push(P('{periodsText}', { indent: true }));
-      out.push(P('๖. หลักเกณฑ์ — เกณฑ์ราคา', { bold: true }));
-      out.push(P('๗. วงเงินงบประมาณ — {totalBudget} บาท', { bold: true }));
-      out.push(P('๘. งวดงานและการจ่ายเงิน', { bold: true }));
-      out.push(P('๙. ค่าปรับ — ร้อยละ ๐.๒๐', { bold: true }));
-      break;
-
-    case 'memo_request':
-      out.push(P('ส่วนราชการ  {schoolName}  {educationArea}'));
-      out.push(P('ที่  {docNumberReport} / {year}          วันที่  {issueDate}'));
-      out.push(P('เรื่อง  รายงานขอจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ)'));
-      out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
-      out.push(P('ด้วย{schoolName} ... (ระหว่างวันที่ {startDate} ถึง {endDate}) ...', { indent: true }));
-      out.push(P('๑. เหตุผลและความจำเป็น — เพื่อประกอบอาหารกลางวัน ... จำนวน {studentCount} คน', { indent: true }));
-      out.push(P('๒. รายละเอียดของงาน — ประกอบอาหารกลางวัน ...', { indent: true }));
-      out.push(P('๓. ราคากลาง — {totalBudget} บาท', { bold: true, indent: true }));
-      out.push(P('๔. วงเงินที่จะจ้าง — {totalBudget} บาท', { bold: true, indent: true }));
-      out.push(P('๕. กำหนดเวลา — {totalDays} วัน ระหว่างวันที่ {startDate} ถึง {endDate}', { indent: true }));
-      out.push(P('๖. วิธีที่จะจ้าง — วิธีเฉพาะเจาะจง', { bold: true, indent: true }));
-      out.push(P('๗. หลักเกณฑ์ — เกณฑ์ราคา', { bold: true, indent: true }));
-      out.push(P('๘. การขออนุมัติแต่งตั้งบุคคลหรือคณะกรรมการ:', { bold: true, indent: true }));
-      out.push(P('๘.๑ แต่งตั้งผู้ควบคุมและคณะกรรมการผู้ตรวจการประกอบอาหาร:', { indent: true }));
-      out.push(P('{committeeTextDays}', { indent: true }));
-      out.push(P('๘.๒ คณะกรรมการตรวจรับพัสดุ:', { indent: true }));
-      out.push(P('{committeeTextRoles}', { indent: true }));
-      out.push(P('ลงชื่อ ....................................................เจ้าหน้าที่', { center: true }));
-      out.push(P('({procurementOfficer})', { center: true }));
-      out.push(P('ความเห็นของหัวหน้าเจ้าหน้าที่', { bold: true }));
-      out.push(P('□ เห็นชอบ          □ อนุมัติ'));
-      out.push(P('ลงชื่อ ....................................................หัวหน้าเจ้าหน้าที่', { center: true }));
-      out.push(P('({chiefOfficer})', { center: true }));
-      out.push(P('คำสั่ง', { bold: true }));
-      out.push(P('□ เห็นชอบ          □ อนุมัติ          □ ลงนามแล้ว'));
-      out.push(P('ลงชื่อ ....................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      break;
-
-    case 'inspection_order':
-      out.push(P('คำสั่ง{schoolName}', { center: true, bold: true, size: 36 }));
-      out.push(P('ที่  {docNumberOrder49} / {year}', { center: true }));
-      out.push(P('เรื่อง  แต่งตั้งคณะกรรมการตรวจรับพัสดุ โดยวิธีเฉพาะเจาะจง', { center: true }));
-      out.push(P('─────────────────────────────────────', { center: true }));
-      out.push(P('ด้วย{schoolName} สังกัด{educationArea} ... ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} ระหว่างวันที่ {startDate} ถึง {endDate} ...', { indent: true }));
-      out.push(P('{committeeTextRoles}', { indent: true }));
-      out.push(P('มีอำนาจหน้าที่ ทำการตรวจรับพัสดุ ...', { indent: true }));
-      out.push(P('ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป', { center: true }));
-      out.push(P('สั่ง ณ วันที่  {issueDate}', { center: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      out.push(P('รับทราบ'));
-      out.push(P('{committeeTextDays}'));
-      break;
-
-    case 'quotation':
-      out.push(P('ใบเสนอราคา', { center: true, bold: true, size: 36 }));
-      out.push(P('วันที่  {issueDate}'));
-      out.push(P('เรื่อง  ใบเสนอราคา'));
-      out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
-      out.push(P('๑. ข้าพเจ้า {contractorName} บัตรประจำตัวประชาชนเลขที่ {contractorId} ... ตั้งอยู่เลขที่ {contractorAddress} ...', { indent: true }));
-      out.push(P('๒. ข้าพเจ้าขอเสนอราคาจ้าง ... เป็นเงินทั้งสิ้น {totalBudget} บาท ({totalBudgetThai}) ...', { indent: true }));
-      out.push(P('๓. คำเสนอนี้จะยืนอยู่เป็นระยะเวลา ๑๘๐ วัน', { indent: true }));
-      out.push(P('๔. กำหนดส่งมอบ ภายใน ๑๕ วัน', { indent: true }));
-      out.push(P('ลงชื่อ......................................................          ลงชื่อ......................................................'));
-      out.push(P('ผู้เจรจาตกลงราคา          ผู้เสนอราคา'));
-      out.push(P('({procurementOfficer})          ({contractorName})'));
-      out.push(P('เจ้าหน้าที่'));
-      break;
-
-    case 'negotiation':
-      out.push(P('วันที่  {issueDate}'));
-      out.push(P('ตามที่ {contractorName} ได้เสนอราคาไว้ต่อ {schoolName} ... เป็นเงินทั้งสิ้น {totalBudget} บาท ({totalBudgetThai}) นั้น', { indent: true }));
-      out.push(P('เจ้าหน้าที่ ได้ทำการต่อรองราคากับผู้เสนอราคารายนี้แล้ว ปรากฏผลดังนี้', { indent: true }));
-      out.push(P('ผู้รับขาย     ( ✓ )  ขอยืนยันราคาเดิม {totalBudget} บาท ({totalBudgetThai})', { indent: true }));
-      out.push(P('(   )  ยินยอมลดราคาลงเหลือเป็นจำนวนเงิน........................................................................', { indent: true }));
-      out.push(P('ลงชื่อ ....................................................{contractorName}', { center: true }));
-      out.push(P('ตำแหน่งผู้จัดการ', { center: true }));
-      out.push(P('ลงชื่อ ....................................................{procurementOfficer}', { center: true }));
-      out.push(P('เจ้าหน้าที่พัสดุ', { center: true }));
-      out.push(P('ลงชื่อ ....................................................{chiefOfficer}', { center: true }));
-      out.push(P('หัวหน้าเจ้าหน้าที่', { center: true }));
-      break;
-
-    case 'approval':
-      out.push(P('ส่วนราชการ  {schoolName}'));
-      out.push(P('ที่  {docNumberApproval} / {year}          วันที่  {issueDate}'));
-      out.push(P('เรื่อง  รายงานผลการพิจารณาและขออนุมัติสั่งจ้าง'));
-      out.push(P('ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} ระหว่างวันที่ {startDate} ถึง {endDate}'));
-      out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
-      out.push(P('ตามที่ผู้อำนวยการ{schoolName} เห็นชอบ ... วงเงินงบประมาณ {totalBudget} บาท นั้น', { indent: true }));
-      out.push(P('เจ้าหน้าที่ได้เจรจาตกลงราคากับผู้ประกอบการโดยตรง ... ดังนี้', { indent: true }));
-      out.push(P('รายการพิจารณา: จ้างเหมาประกอบอาหารกลางวัน', { indent: true }));
-      out.push(P('ผู้ชนะ: {contractorName}', { indent: true }));
-      out.push(P('ราคาที่เสนอ: {totalBudget} บาท', { indent: true }));
-      out.push(P('ราคาที่ตกลง: {totalBudget} บาท', { indent: true }));
-      out.push(P('ลงชื่อ ....................................................เจ้าหน้าที่', { center: true }));
-      out.push(P('({procurementOfficer})', { center: true }));
-      out.push(P('อนุมัติ / ลงนามแล้ว', { center: true, bold: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      out.push(P('{issueDate}', { center: true }));
-      break;
-
-    case 'winner':
-      out.push(P('{schoolName}', { center: true, bold: true, size: 36 }));
-      out.push(P('ประกาศผู้ชนะการเสนอราคา', { center: true, bold: true, size: 36 }));
-      out.push(P('เรื่อง  ประกาศผู้ชนะการเสนอราคา สำหรับการจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ)', { center: true }));
-      out.push(P('ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} โดยวิธีเฉพาะเจาะจง', { center: true }));
-      out.push(P('─────────────────────────────────────', { center: true }));
-      out.push(P('ตามที่{schoolName} ได้มีโครงการจ้าง ... โดยวิธีเฉพาะเจาะจง นั้น', { indent: true }));
-      out.push(P('โครงการจ้างเหมาประกอบอาหารกลางวัน ... ผู้ได้รับการคัดเลือก ได้แก่ {contractorName} โดยเสนอราคาเป็นเงินทั้งสิ้น {totalBudget} บาท ({totalBudgetThai}) ...', { indent: true }));
-      out.push(P('ประกาศ ณ วันที่  {issueDate}', { center: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      break;
-
-    case 'po':
-      out.push(P('ใบสั่งจ้าง', { center: true, bold: true, size: 36 }));
-      out.push(P('ผู้รับจ้าง  {contractorName}          ใบสั่งจ้างเลขที่  {docNumberPO} / {year}'));
-      out.push(P('ที่อยู่  {contractorAddress}          วันที่  {issueDate}'));
-      out.push(P('โทรศัพท์  {contractorPhone}          ส่วนราชการ  {schoolName}'));
-      out.push(P('ตามที่  {contractorName} ได้เสนอราคาไว้ต่อ  {schoolName}  ... ตามรายการดังต่อไปนี้', { indent: true }));
-      out.push(P('๑. การจ้างเหมาประกอบอาหารกลางวัน ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} จำนวน ๑ งาน เป็นเงิน {totalBudget} บาท', { indent: true }));
-      out.push(P('การสั่งจ้างอยู่ภายใต้เงื่อนไขต่อไปนี้', { indent: true }));
-      out.push(P('๑. กำหนดส่งมอบภายใน ๑๕ วัน', { indent: true }));
-      out.push(P('๒. ครบกำหนดส่งมอบ:', { indent: true }));
-      out.push(P('{periodsText}', { indent: true }));
-      out.push(P('๓. สถานที่ส่งมอบและนำเอกสารส่งมอบ {schoolName}', { indent: true }));
-      out.push(P('ลงชื่อ..................................................ผู้สั่งจ้าง          ลงชื่อ..................................................ผู้รับใบสั่งจ้าง'));
-      out.push(P('({directorName})          ({contractorName})'));
-      out.push(P('ผู้อำนวยการ{schoolName}          ผู้รับจ้าง'));
-      break;
-
-    case 'attachment':
-      out.push(P('เอกสารแนบท้ายใบสั่งจ้าง', { center: true, bold: true, size: 36 }));
-      out.push(P('การจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ {semester} ปีการศึกษา {year}', { center: true }));
-      out.push(P('๑. จำนวนนักเรียน {studentCount} คน ราคาคนละ {pricePerStudent} บาทต่อวัน จำนวน {totalDays} วัน', { indent: true }));
-      out.push(P('๒. รวมเป็นเงิน {totalBudget} บาท ({totalBudgetThai})', { indent: true }));
-      out.push(P('๓. รายการอาหารปรุงสำเร็จ:', { indent: true }));
-      out.push(P('{scheduleText}', { indent: true }));
-      out.push(P('ลงชื่อ ...................................................', { center: true }));
-      out.push(P('({directorName})', { center: true }));
-      out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
-      break;
-  }
   return out;
 }
-
-async function downloadMasterStarter() {
-  try {
-    toast('กำลังสร้าง Master Template...');
-    const blob = await buildMasterStarterTemplate();
-    saveAs(blob, 'MASTER_TEMPLATE_12_ฉบับ.docx');
-    toast('✓ ดาวน์โหลดแล้ว');
-  } catch (e) {
-    console.error(e);
-    toast('Error: ' + (e?.message || e), true);
-  }
+function buildPeriodSummary() {
+  const groups = [[],[],[],[],[]];
+  state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+  const MARG = { top: 60, bottom: 60, left: 120, right: 120 };
+  const rows = groups.map((items, i) => {
+    if (!items.length) return null;
+    const amount = items.length * state.settings.studentCount * state.settings.pricePerStudent;
+    return new TableRow({ cantSplit: true, children: [
+      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`งวดที่ ${toThaiDigits(i+1)}`)] }),
+      new TableCell({ width:{size:50,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}`)] }),
+      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDigits(items.length)} วัน`, { align: AlignmentType.CENTER })] }),
+      new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${thMoney(amount)} บาท`, { align: AlignmentType.RIGHT })] }),
+    ]});
+  }).filter(x=>x);
+  return [new Table({
+    width:{ size:100, type:WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true, children: [
+        new TableCell({ children:[p('งวด', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('ระยะเวลา', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('จำนวนวัน', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('จำนวนเงิน', { align: AlignmentType.CENTER, bold: true })] }),
+      ]}),
+      ...rows,
+    ],
+  })];
 }
 
-async function buildMasterStarterTemplate() {
-  const children = [];
-  const pageBreak = () => new Paragraph({
-    spacing: { line: LINE },
-    pageBreakBefore: true,
-    children: [new TextRun({ text: '', font: FONT, size: FS })],
-  });
-
-  DOCS.forEach((d, idx) => {
-    if (idx > 0) children.push(pageBreak());
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { line: LINE, after: 120 },
-      children: [new TextRun({ text: `=== ${d.name} ===`, bold: true, size: 36, font: FONT })],
-    }));
-    children.push(new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { line: LINE, after: 240 },
-      children: [new TextRun({ text: '(เทมเพลตฉบับที่ ' + (idx+1) + ' — ห้ามลบแท็ก { } ที่อยู่ในปีกกา)', italics: true, size: 24, font: FONT })],
-    }));
-    children.push(...buildDocTemplate(d.id));
-  });
-
-  const document = new Document({
-    creator: 'ระบบจัดจ้างอาหารกลางวัน',
-    title: 'Master Template',
-    styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
-    sections: [{
-      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } },
-      children,
-    }],
-  });
-  return await Packer.toBlob(document);
+/* ---------- Documents ---------- */
+function docTOR_Assignment() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    memoHeaderRow(),
+    p('ส่วนราชการ  ' + s.schoolName, { before: 120 }),
+    rowLR(`ที่  ${toThaiDigits(190)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`),
+    headUnderline('เรื่อง', 'แต่งตั้งผู้จัดทำร่างขอบเขตของงาน (Terms OF Reference : TOR)'),
+    p('เรียน  ผู้อำนวยการ' + s.schoolName, { before: 240 }),
+    pMix([
+      { text: 'ด้วย' + s.schoolName + ' สังกัด' + s.educationArea + ' ได้อนุมัติจัดสรรงบประมาณประจำปีงบประมาณ พ.ศ. ' + toThaiDigits(s.year) + ' ' },
+      { text: 'การจัดซื้อ/จัดจ้าง จ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ' + toThaiDigits(s.semester) + ' ปีการศึกษา ' + toThaiDigits(s.year) + ' จำนวน...' + toThaiDigits(1) + '...รายการ งบประมาณ ' + thMoney(total) + ' บาท รายละเอียดตามโครงการส่งเสริมสุขภาพ', bold: true },
+      { text: ' นั้น' },
+    ], { indent:{firstLine:INDENT}, before: 120 }),
+    p('ดังนั้น เพื่อให้การกำหนดรายละเอียดของร่างขอบเขตงานฯ ดังกล่าว เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ' + toThaiDigits(2560) + ' ข้อ ' + toThaiDigits(21) + ' และพระราชบัญญัติการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ' + toThaiDigits(2560) + ' มาตรา ' + toThaiDigits(4) + ' "ราคากลาง" จึงขอแต่งตั้งบุคคล เพื่อจัดทำรายละเอียดคุณลักษณะเฉพาะพัสดุ/รายละเอียดของร่างขอบเขตของงานและกำหนดราคากลาง เพื่อใช้สำหรับดำเนินการจัดซื้อดังกล่าว คือ', { indent:{firstLine:INDENT}, before: 120 }),
+    pMix([
+      { text: s.torAuthor, bold: true },
+      { text: '     ' + s.torAuthorPosition },
+    ], { align: AlignmentType.CENTER, before: 240, after: 240 }),
+    p('โดยมีหน้าที่ จัดทำร่างขอบเขตของงาน และกำหนดหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ โดยให้มีรายละเอียดเป็นไปตามกฎหมาย ระเบียบ และคำสั่งที่เกี่ยวข้อง', { indent:{firstLine:INDENT}, before: 120 }),
+    p('จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ', { indent:{firstLine:INDENT}, before: 120 }),
+    twoSig(
+      ['ลงชื่อ...............................เจ้าหน้าที่', '', `(${s.procurementOfficer})`],
+      ['ลงชื่อ ..............................หัวหน้าเจ้าหน้าที่', '', `(${s.chiefOfficer})`]
+    ),
+    p('□ ทราบ', { align: AlignmentType.CENTER, before: 360 }),
+    p('□ อนุมัติ', { align: AlignmentType.CENTER }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`),
+  ];
 }
-
-/* DOCX imports */
-const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign } = docx;
-
-const FONT = 'TH Sarabun IT9';
-const FS = 32;
-const LINE = 276;
-const INDENT = 1440;
+function docCommitteeOrder() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    garudaCenter(),
+    p(`คำสั่ง${s.schoolName}`, { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p(`ที่  ${toThaiDigits(48)} / ${toThaiDigits(s.year)}`, { align: AlignmentType.CENTER, keepNext: true }),
+    p('เรื่อง  แต่งตั้งคณะกรรมการร่างขอบเขตของงาน (Terms OF Reference : TOR)', { align: AlignmentType.CENTER, keepNext: true }),
+    p('สำหรับจัดซื้อ/จัดจ้าง จ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ)', { align: AlignmentType.CENTER, keepNext: true }),
+    hr(200),
+    p(`ด้วย${s.schoolName} สังกัด${s.educationArea} มีความประสงค์จะดำเนินการ จัดซื้อ/จัดจ้าง จ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} จำนวน ${toThaiDigits(1)} รายการ เป็นเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)}) โดยวิธีเฉพาะเจาะจง`, { indent:{firstLine:INDENT} }),
+    p(`เพื่อให้การดำเนินการดังกล่าวเป็นไปด้วยความเรียบร้อย ถูกต้อง เหมาะสม เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ${toThaiDigits(2560)} ข้อ ${toThaiDigits(22)} และอาศัยอำนาจตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ${toThaiDigits(2560)} ข้อ ${toThaiDigits(69)} แต่ทั้งนี้ผู้จัดทำร่างขอบเขตของงาน`, { indent:{firstLine:INDENT}, before: 120 }),
+    p('ผู้จัดทำร่างขอบเขตของงาน (Terms OF Reference : TOR)', { align: AlignmentType.CENTER, bold: true, before: 240, keepNext: true }),
+    p(`${s.torAuthor}  ตำแหน่ง  ${s.torAuthorPosition}`, { align: AlignmentType.CENTER, keepNext: true }),
+    p('อำนาจและหน้าที่', { indent:{firstLine:INDENT}, bold: true, before: 240, keepNext: true }),
+    p('จัดทำร่างขอบเขตงานที่จะซื้อหรือจ้าง รวมทั้งกำหนดหลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ', { indent:{firstLine:INDENT} }),
+    p('ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป', { align: AlignmentType.CENTER, before: 240 }),
+    p(`สั่ง ณ วันที่  ${toThaiDate(s.issueDate)}`, { align: AlignmentType.CENTER, before: 120 }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`),
+    p('รับทราบ', { bold: true, before: 480 }),
+    p(`${toThaiDigits(1)}. ${s.torAuthor}`),
+    p('......................................................................'),
+  ];
+}
+function docMemoTOR() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    memoHeaderRow(),
+    p('ส่วนราชการ  ' + s.schoolName, { before: 120 }),
+    rowLR(`ที่  ${toThaiDigits(191)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`),
+    headUnderline('เรื่อง', 'ขอความเห็นชอบการจัดทำขอบเขตของงาน (Terms of Reference : TOR)'),
+    p('เรียน  ผู้อำนวยการ' + s.schoolName, { before: 240 }),
+    p('ความเดิม', { bold: true, indent:{firstLine:INDENT}, before: 120, keepNext: true }),
+    p(`ตามที่ โรงเรียน${s.schoolName} จะดำเนินการจัดซื้อ วัสดุสำหรับโครงการส่งเสริมสุขภาพ กิจกรรมอาหารกลางวันของ${s.schoolName} โดยวิธีเฉพาะเจาะจง จำนวนเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)}) และได้แต่งตั้ง ผู้จัดทำขอบเขตของงาน (Terms OF Reference : TOR) ตามคำสั่ง${s.schoolName} ที่ ${toThaiDigits(48)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(s.issueDate)} แล้วนั้น`, { indent:{firstLine:INDENT} }),
+    p('ข้อเท็จจริง', { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`ผู้จัดทำขอบเขตของงาน (Terms OF Reference : TOR) ตามคำสั่งดังกล่าวข้างต้น ได้จัดทำขอบเขตของงาน (Terms OF Reference : TOR) ที่จะดำเนินการจัดซื้อ/จัดจ้างเสร็จเรียบร้อยแล้ว โดยมีรายละเอียดตามที่แนบมาพร้อมนี้`, { indent:{firstLine:INDENT} }),
+    p('ข้อพิจารณา', { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติขอบเขตของงาน (Terms OF Reference : TOR) และให้ความเห็นชอบขอบเขตของงาน (Terms OF Reference : TOR) ในการใช้เป็นข้อมูลสำหรับจัดซื้อ/จัดจ้างต่อไป`, { indent:{firstLine:INDENT} }),
+    ...sigR(s.torAuthor, 'ผู้จัดทำขอบเขตของงาน (Terms OF Reference : TOR)'),
+    p('□ ทราบ', { align: AlignmentType.CENTER, before: 360 }),
+    p('□ อนุมัติ', { align: AlignmentType.CENTER }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(s.issueDate)),
+  ];
+}
+function docTOR() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    p(`${toThaiDigits(1)}. ความเป็นมา`, { bold: true, keepNext: true }),
+    p(`ตามพระราชบัญญัติการศึกษาแห่งชาติ พ.ศ. ${toThaiDigits(2542)} ในมาตราที่ ${toThaiDigits(6)} ที่กำหนดไว้ว่า การจัดการศึกษาต้องเป็นไปเพื่อพัฒนาคนไทยให้เป็นมนุษย์ที่สมบูรณ์ทั้งร่างกายและจิตใจ สติปัญญา ความรู้ และคุณธรรม มีจริยธรรมและมีวัฒนธรรมในการดำรงชีวิต สามารถอยู่ร่วมกับผู้อื่นได้อย่างมีความสุข ${s.schoolName} ได้รับงบประมาณสนับสนุนโครงการอาหารกลางวัน จาก อบต.ดอยเต่า สำหรับจัดอาหารกลางวันให้กับนักเรียนระดับอนุบาลจนถึงชั้นประถมศึกษาปีที่ ${toThaiDigits(6)} ทุกคน เพื่อให้นักเรียนได้รับประทานอาหารที่มีคุณค่าทางโภชนาการอย่างครบถ้วน สะอาดและปลอดภัยต่อสุขภาพ`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(2)}. วัตถุประสงค์`, { bold: true, before: 240, keepNext: true }),
+    p(`เพื่อจัดหาบุคคลเพื่อประกอบอาหารกลางวัน(ปรุงสำเร็จ) ให้กับนักเรียนระดับอนุบาลจนถึงชั้นประถมศึกษาปีที่ ${toThaiDigits(6)} ของ${s.schoolName} จำนวน ${toThaiDigits(s.studentCount)} คน จำนวน ${toThaiDigits(s.totalDays)} วัน (เว้นวันหยุดราชการ)`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}. คุณสมบัติผู้เสนอราคา (กำหนดตามแบบที่กรมบัญชีกลางกำหนด)`, { bold: true, before: 240, keepNext: true }),
+    p('เพื่อให้การดำเนินการเป็นไปตามวัตถุประสงค์ จึงกำหนดคุณสมบัติของผู้เสนอราคาดังต่อไปนี้', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(1)} ผู้เสนอราคาต้องเป็นบุคคลธรรมดาหรือนิติบุคคล มีอาชีพรับจ้างงาน ตามที่จัดจ้างในครั้งนี้`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(2)} ผู้เสนอราคาต้องไม่เป็นผู้ถูกระบุชื่อไว้ในบัญชีรายชื่อผู้ทิ้งงานของราชการและได้แจ้งเวียนชื่อแล้ว หรือไม่เป็นผู้ที่ได้รับผลของการสั่งให้นิติบุคคลหรือบุคคลอื่นเป็นผู้ทิ้งงานตามระเบียบของทางราชการ`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(3)} ผู้เสนอราคาต้องไม่เป็นผู้มีผลประโยชน์ร่วมกันกับผู้เสนอราคารายอื่น และ/หรือไม่เป็นผู้กระทำการอันเป็นการขัดขวางการแข่งขันราคาอย่างเป็นธรรม`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(4)} ผู้เสนอราคาต้องไม่เป็นผู้ได้รับเอกสิทธิ์หรือความคุ้มกัน ซึ่งอาจปฏิเสธไม่ยอมขึ้นศาลไทย เว้นแต่รัฐบาลของผู้เสนอราคาไม่มีคำสั่งให้สละสิทธิ์และความคุ้มกันเช่นว่านั้น`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)} ผู้เสนอราคาต้องมีคุณสมบัติและไม่มีลักษณะต้องห้ามดังนี้`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)}.${toThaiDigits(1)} มีความสามารถตามกฎหมาย`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)}.${toThaiDigits(2)} ไม่เป็นบุคคลล้มละลาย`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)}.${toThaiDigits(3)} ไม่อยู่ระหว่างเลิกกิจการ`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)}.${toThaiDigits(4)} ไม่เป็นบุคคลซึ่งอยู่ระหว่างถูกระงับการยื่นข้อเสนอหรือทำสัญญากับหน่วยงานของรัฐตามมาตรา ${toThaiDigits(106)} วรรคสาม`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}.${toThaiDigits(5)}.${toThaiDigits(5)} คุณสมบัติหรือลักษณะต้องห้ามอื่นตามที่คณะกรรมการนโยบายกำหนด ฯลฯ`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(4)}. ขอบเขตการดำเนินการ`, { bold: true, before: 240, keepNext: true }),
+    p(`ผู้รับจ้างต้องเป็นผู้รับผิดชอบประกอบอาหารกลางวัน(ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ให้แก่นักเรียน ภายในวงเงินไม่เกิน ${thMoney(total)} บาท (${formatMoneyThai(total)}) โดยผู้รับจ้างต้องประกอบอาหารกลางวัน(ปรุงสำเร็จ)ในทุกวันทำการ โดยรายการอาหารในแต่ละวันจะต้องประกอบด้วย`, { indent:{firstLine:INDENT} }),
+    ...buildMenuTables(),
+    p(`ทั้งนี้ การประกอบอาหารในแต่ละวันจะต้องเป็นรายการอาหารที่${s.schoolName} กำหนดให้ผู้รับจ้างทราบในแต่ละวัน โดยโรงเรียนจะกำหนดให้คณะกรรมการตรวจรับ/ผู้ตรวจรับพัสดุ เป็นผู้แจ้งรายการอาหารที่ต้องการให้ผู้รับจ้างทราบก่อนถึงวันประกอบอาหาร(ปรุงสำเร็จ) อย่างน้อย ${toThaiDigits(5)} วันทำการ`, { indent:{firstLine:INDENT}, before: 200 }),
+    p(`${toThaiDigits(5)}. การส่งมอบพัสดุ`, { bold: true, before: 240, keepNext: true }),
+    p(`โรงเรียนกำหนดการส่งมอบงานออกเป็นจำนวน ${toThaiDigits(5)} งวด โดยมีรายละเอียด ดังนี้`, { indent:{firstLine:INDENT} }),
+    ...buildPeriodSummary(),
+    p(`${toThaiDigits(6)}. หลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ`, { bold: true, before: 240, keepNext: true }),
+    p('เกณฑ์ราคา', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(7)}. วงเงินงบประมาณ`, { bold: true, before: 240, keepNext: true }),
+    p(`${thMoney(total)} บาท (${formatMoneyThai(total)})`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(8)}. งวดงานและการจ่ายเงิน`, { bold: true, before: 240, keepNext: true }),
+    p(`โรงเรียนกำหนดการจ่ายเงินออกเป็น จำนวน ${toThaiDigits(5)} งวด โดยมีรายละเอียดดังนี้`, { indent:{firstLine:INDENT} }),
+    ...buildPeriodSummary(),
+    p(`${toThaiDigits(9)}. ค่าปรับ`, { bold: true, before: 240, keepNext: true }),
+    p(`ร้อยละ ${toThaiDigits('0.20')} (อ้างอิงตามหนังสือคณะกรรมการวินิจฉัยปัญหาการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ ที่ กค(กวจ)${toThaiDigits('0405.2')}/ว${toThaiDigits(116)} ลงวันที่ ${toThaiDigits(12)} มีนาคม ${toThaiDigits(2562)} เรื่องแนวทางปฏิบัติในการจัดซื้อวัตถุดิบเพื่อใช้ในการประกอบอาหาร การจ้างบุคคลเพื่อประกอบอาหารหรือการจ้างเหมาประกอบอาหาร(ปรุงสำเร็จ) ข้อ ${toThaiDigits(4)} การกำหนดค่าปรับในสัญญาหรือข้อตกลง)`, { indent:{firstLine:INDENT} }),
+  ];
+}
+function docMemoRequest() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    memoHeaderRow(),
+    p('ส่วนราชการ  ' + s.schoolName + '  ' + s.educationArea, { before: 120 }),
+    rowLR(`ที่  ${toThaiDigits(192)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`),
+    headUnderline('เรื่อง', `รายงานขอจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)}`),
+    p('เรียน  ผู้อำนวยการ' + s.schoolName, { before: 240 }),
+    p(`ด้วย${s.schoolName} มีความจำเป็นจะจ้างประกอบอาหาร(ปรุงสำเร็จ)ให้แก่นักเรียนรับประทานประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} (ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)}) การจัดจ้างครั้งนี้ดำเนินการ โดยวิธีเฉพาะเจาะจงตามมาตรา ${toThaiDigits(56)} (${toThaiDigits(2)}) (${toThaiDigits('ข')}) ประกอบหนังสือครบวงจรการคลัง ด่วนที่สุด กค (กวจ) ${toThaiDigits('0405.2')}/ว${toThaiDigits(116)} ลงวันที่ ${toThaiDigits(12)} มีนาคม ${toThaiDigits(2562)} ซึ่งมีรายละเอียดดังต่อไปนี้`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(1)}. เหตุผลและความจำเป็นที่ต้องจ้าง`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`เพื่อประกอบอาหารกลางวัน(ปรุงสำเร็จ)ให้กับนักเรียนระดับอนุบาลจนถึงชั้นประถมศึกษาปีที่ ${toThaiDigits(6)} ${s.schoolName} จำนวน ${toThaiDigits(s.studentCount)} คน`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(2)}. รายละเอียดของงานที่จะจ้าง`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p('ประกอบอาหารกลางวัน (ปรุงสำเร็จ) ให้แก่นักเรียนรับประทาน รายละเอียดของงานที่จะจ้างตามที่แนบ', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}. ราคากลางของพัสดุที่จะจ้าง`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`เป็นเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)})`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(4)}. วงเงินที่จะจ้าง`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`เป็นเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)})`, { indent:{firstLine:INDENT} }),
+    p('(โดยให้ระบุวงเงินงบประมาณ ถ้าไม่มีวงเงินดังกล่าวให้ระบุวงเงินที่ประมาณว่าจะจ้างในครั้งนั้น)', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(5)}. กำหนดเวลาที่ต้องการใช้พัสดุ`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`ระยะเวลาการจ้าง จำนวน ${toThaiDigits(s.totalDays)} วัน ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)}`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(6)}. วิธีที่จะจ้าง และเหตุผลที่จะต้องจ้างโดยวิธีนั้น`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p('ดำเนินการด้วยวิธีเฉพาะเจาะจงเนื่องจากการจัดซื้อจัดจ้างพัสดุที่มีการผลิต จำหน่าย หรือให้บริการทั่วไป และมีวงเงินในการจัดซื้อจัดจ้างครั้งหนึ่งไม่เกินวงเงินตามที่กำหนดในกฎกระทรวง', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(7)}. หลักเกณฑ์การพิจารณาคัดเลือกข้อเสนอ`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p('การพิจารณาคัดเลือกข้อเสนอโดยใช้เกณฑ์ราคา', { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(8)}. การขออนุมัติแต่งตั้งบุคคลหรือคณะกรรมการ ดังนี้`, { bold: true, indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`${toThaiDigits(8)}.${toThaiDigits(1)} แต่งตั้งผู้ควบคุมและคณะกรรมการผู้ตรวจการประกอบอาหาร ประกอบด้วย`, { indent:{firstLine:INDENT}, keepNext: true }),
+    ...state.committee.map((c,i) => p(`${toThaiDigits(i+1)}. ${c.name}    ${c.days||''}`, { indent:{firstLine:INDENT+720} })),
+    p(`${toThaiDigits(8)}.${toThaiDigits(2)} คณะกรรมการตรวจรับพัสดุ หรือผู้ตรวจรับพัสดุ ประกอบด้วย`, { indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    ...state.committee.map((c,i) => p(`${toThaiDigits(i+1)}. ${c.name}    ${c.role}`, { indent:{firstLine:INDENT+720} })),
+    p(`โดยให้คณะกรรมการตรวจรับพัสดุ/ผู้ตรวจรับพัสดุ ที่ได้รับการแต่งตั้ง ปฏิบัติหน้าที่ตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ.${toThaiDigits(2560)} ข้อ ${toThaiDigits(175)}`, { indent:{firstLine:INDENT}, before: 240 }),
+    p('จึงเรียนมาเพื่อโปรดพิจารณา หากเห็นชอบขอได้โปรด', { indent:{firstLine:INDENT}, before: 240 }),
+    p(`${toThaiDigits(1)}. อนุมัติให้ดำเนินการจ้างเหมาประกอบอาหารกลางวัน(ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} ตามรายงานขอจ้างดังกล่าวข้างต้น`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(2)}. อนุมัติให้แต่งตั้งคณะกรรมการ ตามข้อ ${toThaiDigits(8)}.${toThaiDigits(1)} และ ${toThaiDigits(8)}.${toThaiDigits(2)}`, { indent:{firstLine:INDENT} }),
+    ...sigR(s.procurementOfficer, 'เจ้าหน้าที่'),
+    p('ความเห็นของหัวหน้าเจ้าหน้าที่', { bold: true, before: 360, keepNext: true }),
+    p('□ เห็นชอบ     □ อนุมัติ', { keepNext: true }),
+    ...sigR(s.chiefOfficer, 'หัวหน้าเจ้าหน้าที่', toThaiDate(s.issueDate)),
+    p('คำสั่ง', { bold: true, before: 360, keepNext: true }),
+    p('□ เห็นชอบ     □ อนุมัติ     □ ลงนามแล้ว', { keepNext: true }),
+    ...sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(s.issueDate)),
+  ];
+}
+function docInspectionOrder() {
+  const s = state.settings;
+  return [
+    garudaCenter(),
+    p(`คำสั่ง${s.schoolName}`, { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p(`ที่  ${toThaiDigits(49)} / ${toThaiDigits(s.year)}`, { align: AlignmentType.CENTER, keepNext: true }),
+    p('เรื่อง  แต่งตั้งคณะกรรมการตรวจรับพัสดุ โดยวิธีเฉพาะเจาะจง', { align: AlignmentType.CENTER, keepNext: true }),
+    p('สำหรับจัดจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ)', { align: AlignmentType.CENTER, keepNext: true }),
+    hr(200),
+    p(`ด้วย${s.schoolName} สังกัด${s.educationArea} มีความประสงค์ขอดำเนินการจ้างเหมาประกอบอาหารปรุงสำเร็จให้แก่นักเรียนรับประทาน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} โดยวิธีเฉพาะเจาะจง และเพื่อให้เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้าง และการบริหารพัสดุภาครัฐ พ.ศ. ${toThaiDigits(2560)} จึงขอแต่งตั้งคณะกรรมการตรวจรับพัสดุ ที่มีรายชื่อต่อไปนี้ เป็นผู้ตรวจรับพัสดุสำหรับจัดซื้อตามโครงการจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) โดยวิธีเฉพาะเจาะจง ดังต่อไปนี้`, { indent:{firstLine:INDENT} }),
+    ...state.committee.map((c, i) => p(`${toThaiDigits(i+1)}. ${c.name}     ตำแหน่ง ${c.position||'-'}     ${c.role}`, { indent:{firstLine:INDENT} })),
+    p('มีอำนาจหน้าที่ ทำการตรวจรับพัสดุให้เป็นไปตามเงื่อนไขของสัญญาหรือข้อตกลงนั้นและให้ผู้ตรวจรับ ที่ได้รับแต่งตั้งตามคำสั่งนี้ ปฏิบัติหน้าที่ให้เป็นไปตามมติคณะรัฐมนตรี โดยเคร่งครัด', { indent:{firstLine:INDENT}, before: 120 }),
+    p('ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป', { align: AlignmentType.CENTER, before: 360 }),
+    p(`สั่ง ณ วันที่  ${toThaiDate(s.issueDate)}`, { align: AlignmentType.CENTER, before: 120 }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`),
+    p('รับทราบ', { bold: true, before: 480 }),
+    ...state.committee.map((c, i) => p(`${toThaiDigits(i+1)}. ${c.name}`)),
+    p('......................................................................'),
+  ];
+}
+function docQuotation() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    new Paragraph({ pageBreakBefore: true, spacing: { line: LINE }, children: [new TextRun({ text: '', font: FONT, size: FS })] }),
+    p('ใบเสนอราคา', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p(`วันที่  ${toThaiDate(s.issueDate)}`, { align: AlignmentType.RIGHT, before: 120 }),
+    p('เรื่อง  ใบเสนอราคา', { before: 240, keepNext: true }),
+    p('เรียน  ผู้อำนวยการ' + s.schoolName, { keepNext: true }),
+    p(`${toThaiDigits(1)}. ข้าพเจ้า ${s.contractorName} บัตรประจำตัวประชาชนเลขที่ ${toThaiDigits(s.contractorId)} ซึ่งเป็นผู้มีอำนาจลงนามผูกพันสถานประกอบการ ตั้งอยู่เลขที่ ${toThaiDigits(s.contractorAddress)} ซึ่งได้ศึกษาทำความเข้าใจขอบเขตของงานการจ้างประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ของ${s.schoolName} และรายละเอียดต่างๆ โดยตลอดและยอมรับข้อกำหนดและเงื่อนไขนั้นแล้ว รวมทั้งรับรองว่า ข้าพเจ้าเป็นผู้มีคุณสมบัติครบถ้วนตามที่กำหนด และไม่เป็นผู้ทิ้งงานของทางราชการ`, { indent:{firstLine:INDENT}, before: 240 }),
+    p(`${toThaiDigits(2)}. ข้าพเจ้าขอเสนอราคาจ้างประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} เป็นเงินทั้งสิ้น ${thMoney(total)} บาท (${formatMoneyThai(total)}) ซึ่งเป็นราคาที่รวมภาษีมูลค่าเพิ่ม รวมทั้งภาษีอากรอื่น และค่าใช้จ่ายทั้งปวงไว้ด้วยแล้ว`, { indent:{firstLine:INDENT}, before: 120 }),
+    p(`${toThaiDigits(3)}. คำเสนอนี้จะยืนอยู่เป็นระยะเวลา ${toThaiDigits(180)} วัน นับตั้งแต่วันที่ได้ยื่นใบเสนอราคา`, { indent:{firstLine:INDENT}, before: 120 }),
+    p(`${toThaiDigits(4)}. กำหนดส่งมอบ ภายใน ${toThaiDigits(15)} วัน นับถัดจากวันลงนามใบสั่งจ้าง/ข้อตกลงจ้าง`, { indent:{firstLine:INDENT}, before: 120 }),
+    twoSig(
+      ['ลงชื่อ......................................................', 'ผู้เจรจาตกลงราคา', `(${s.procurementOfficer})`, 'เจ้าหน้าที่'],
+      ['ลงชื่อ......................................................', 'ผู้เสนอราคา', `(${s.contractorName})`]
+    ),
+  ];
+}
+function docNegotiation() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    p(`วันที่  ${toThaiDate(s.issueDate)}`, { align: AlignmentType.RIGHT }),
+    p(`ตามที่ ${s.contractorName} ได้เสนอราคาไว้ต่อ ${s.schoolName} สังกัด${s.educationArea} จัดจ้างประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} โดยวิธีเฉพาะเจาะจง เป็นเงินทั้งสิ้น ${thMoney(total)} บาท (${formatMoneyThai(total)}) นั้น`, { indent:{firstLine:INDENT}, before: 240 }),
+    p('เจ้าหน้าที่ ได้ทำการต่อรองราคากับผู้เสนอราคารายนี้แล้ว ปรากฏผลดังนี้', { indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`ผู้รับขาย     ( ✓ )  ขอยืนยันราคาเดิม ${thMoney(total)} บาท (${formatMoneyThai(total)})`, { indent:{firstLine:INDENT} }),
+    p('(   )  ยินยอมลดราคาลงเหลือเป็นจำนวนเงิน........................................................................', { indent:{firstLine:INDENT} }),
+    p('ทั้งนี้ ได้ตกลงทำใบสั่งซื้อ และข้อเสนออื่น ๆ ผู้เสนอราคายังคงให้ถือตามใบเสนอราคาที่ได้ยื่นไว้ต่อโรงเรียนบ้านถิ่นสำราญ พร้อมกันนี้จึงได้ให้ผู้เสนอราคาลงชื่อไว้เป็นหลักฐาน', { indent:{firstLine:INDENT}, before: 240 }),
+    ...sigR(s.contractorName, 'ตำแหน่งผู้จัดการ'),
+    ...sigR(s.procurementOfficer, 'เจ้าหน้าที่พัสดุ'),
+    ...sigR(s.chiefOfficer, 'หัวหน้าเจ้าหน้าที่'),
+  ];
+}
+function docApproval() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    memoHeaderRow(),
+    p('ส่วนราชการ  ' + s.schoolName, { before: 120 }),
+    rowLR(`ที่  ${toThaiDigits(193)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`),
+    headUnderline('เรื่อง', 'รายงานผลการพิจารณาและขออนุมัติสั่งจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ)'),
+    p(`ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)}`),
+    p('เรียน  ผู้อำนวยการ' + s.schoolName, { before: 240 }),
+    p(`ตามที่ผู้อำนวยการ${s.schoolName} เห็นชอบให้ดำเนินการจ้างเหมาประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} โดยวิธีเฉพาะเจาะจง วงเงินงบประมาณ ${thMoney(total)} บาท นั้น`, { indent:{firstLine:INDENT} }),
+    p(`เจ้าหน้าที่ได้เจรจาตกลงราคากับผู้ประกอบการโดยตรงตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ.${toThaiDigits(2560)} ข้อ ${toThaiDigits(79)} แล้ว ขอรายงานผลการพิจารณาการจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคการศึกษาฯ ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} โดยวิธีเฉพาะเจาะจง ดังนี้`, { indent:{firstLine:INDENT}, before: 120 }),
+    new Table({
+      width:{ size:100, type:WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ tableHeader: true, cantSplit: true, children: [
+          new TableCell({ width:{size:40,type:WidthType.PERCENTAGE}, children:[p('รายการพิจารณา', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, children:[p('ผู้ชนะการเสนอราคา', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, children:[p('ราคาที่เสนอ (รวมภาษี)', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, children:[p('ราคาที่ตกลง (รวมภาษี)', { align:AlignmentType.CENTER, bold:true })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ children:[p(`ดำเนินการจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)}`)] }),
+          new TableCell({ children:[p(s.contractorName)] }),
+          new TableCell({ children:[p(thMoney(total), { align:AlignmentType.RIGHT })] }),
+          new TableCell({ children:[p(thMoney(total), { align:AlignmentType.RIGHT })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ columnSpan:3, children:[p('รวม', { align:AlignmentType.RIGHT, bold: true })] }),
+          new TableCell({ children:[p(thMoney(total), { align:AlignmentType.RIGHT, bold:true })] }),
+        ]}),
+      ],
+    }),
+    p(`จึงเห็นสมควรรับราคาจาก ${thMoney(total)} บาท การจัดซื้อคราวนี้ไม่เกินวงเงินที่ประมาณไว้ และไม่สูงกว่าราคากลาง เจ้าหน้าที่ได้ต่อรองราคาแล้ว ผู้เสนอราคาไม่สามารถลดราคาลงได้อีกตามใบเสนอราคาที่แนบ ครบกำหนดยืนราคาวันที่ ${toThaiDigits(1)} กันยายน ${toThaiDigits(s.year)} กำหนดส่งมอบของ ภายใน ${toThaiDigits(15)} วัน นับถัดจากวันลงนามในใบสั่งจ้าง สถานที่ส่งมอบ ณ ${s.schoolName}`, { indent:{firstLine:INDENT}, before: 240 }),
+    p('จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติให้ดำเนินการจัดจ้าง จากผู้ชนะการเสนอราคาดังกล่าว และลงนามในประกาศรายชื่อผู้ชนะการเสนอราคา และใบสั่งจ้าง ที่เสนอมาพร้อมนี้', { indent:{firstLine:INDENT}, before: 120 }),
+    ...sigR(s.procurementOfficer, 'เจ้าหน้าที่'),
+    p('อนุมัติ / ลงนามแล้ว', { align: AlignmentType.CENTER, bold: true, before: 360, keepNext: true }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(s.issueDate)),
+  ];
+}
+function docWinner() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    garudaCenter(),
+    p(`${s.schoolName}`, { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p('ประกาศผู้ชนะการเสนอราคา', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p('เรื่อง  ประกาศผู้ชนะการเสนอราคา สำหรับการจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ)', { align: AlignmentType.CENTER, keepNext: true }),
+    p(`ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} โดยวิธีเฉพาะเจาะจง`, { align: AlignmentType.CENTER, keepNext: true }),
+    hr(200),
+    p(`ตามที่${s.schoolName} ได้มีโครงการจ้างประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} โดยวิธีเฉพาะเจาะจง นั้น`, { indent:{firstLine:INDENT} }),
+    p(`โครงการจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคการศึกษา ระหว่างวันที่ ${toThaiDate(s.startDate)} ถึง ${toThaiDate(s.endDate)} ผู้ได้รับการคัดเลือก ได้แก่ ${s.contractorName} โดยเสนอราคาเป็นเงินทั้งสิ้น ${thMoney(total)} บาท (${formatMoneyThai(total)}) รวมภาษีมูลค่าเพิ่มและภาษีอื่น ค่าขนส่ง ค่าจดทะเบียน และค่าใช้จ่ายอื่นๆ ทั้งปวง`, { indent:{firstLine:INDENT}, before: 120 }),
+    p(`ประกาศ ณ วันที่  ${toThaiDate(s.issueDate)}`, { align: AlignmentType.CENTER, before: 360 }),
+    ...sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`),
+  ];
+}
+function docPurchaseOrder() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    garudaCenter(),
+    p('ใบสั่งจ้าง', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    twoSig(
+      [`ผู้รับจ้าง  ${s.contractorName}`, `ที่อยู่  ${toThaiDigits(s.contractorAddress)}`, `โทรศัพท์  ${toThaiDigits(s.contractorPhone)}`, `ส่วนราชการ  ${s.schoolName}`],
+      [`ใบสั่งจ้างเลขที่  ${toThaiDigits(69)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`, '', '']
+    ),
+    p(`ตามที่  ${s.contractorName} ได้เสนอราคาไว้ต่อ  ${s.schoolName}  ซึ่งได้รับราคาและตกลงจ้าง  ตามรายการดังต่อไปนี้`, { indent:{firstLine:INDENT}, before: 240 }),
+    new Table({
+      width:{ size:100, type:WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ tableHeader: true, cantSplit: true, children: [
+          new TableCell({ width:{size:8,type:WidthType.PERCENTAGE}, children:[p('ลำดับ', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:47,type:WidthType.PERCENTAGE}, children:[p('รายการ', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:9,type:WidthType.PERCENTAGE}, children:[p('จำนวน', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:8,type:WidthType.PERCENTAGE}, children:[p('หน่วย', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, children:[p('ราคาต่อหน่วย (บาท)', { align:AlignmentType.CENTER, bold:true })] }),
+          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, children:[p('จำนวนเงิน (บาท)', { align:AlignmentType.CENTER, bold:true })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ children:[p(toThaiDigits(1), { align:AlignmentType.CENTER })] }),
+          new TableCell({ children:[p(`การจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)}`)] }),
+          new TableCell({ children:[p(toThaiDigits(1), { align:AlignmentType.CENTER })] }),
+          new TableCell({ children:[p('งาน', { align:AlignmentType.CENTER })] }),
+          new TableCell({ children:[p(thMoney(total) + ' บาท', { align:AlignmentType.RIGHT })] }),
+          new TableCell({ children:[p(thMoney(total) + ' บาท', { align:AlignmentType.RIGHT })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ columnSpan:5, children:[p('รวมเป็นเงิน', { align:AlignmentType.RIGHT })] }),
+          new TableCell({ children:[p(thMoney(total) + ' บาท', { align:AlignmentType.RIGHT })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ columnSpan:5, children:[p('ภาษีมูลค่าเพิ่ม', { align:AlignmentType.RIGHT })] }),
+          new TableCell({ children:[p('-', { align:AlignmentType.RIGHT })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ columnSpan:5, children:[p(`(จำนวนเงินตัวอักษร) (${formatMoneyThai(total)})`)] }),
+          new TableCell({ children:[p('รวมเป็นเงินทั้งสิ้น', { align:AlignmentType.RIGHT })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ columnSpan:5, children:[p('', { align:AlignmentType.RIGHT })] }),
+          new TableCell({ children:[p(thMoney(total) + ' บาท', { align:AlignmentType.RIGHT })] }),
+        ]}),
+      ],
+    }),
+    p('การสั่งจ้างอยู่ภายใต้เงื่อนไขต่อไปนี้', { indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`${toThaiDigits(1)}. กำหนดส่งมอบภายใน ${toThaiDigits(15)} วัน นับถัดจากวันที่ผู้รับจ้างได้รับสั่งจ้าง`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(2)}. ครบกำหนดส่งมอบ ดังนี้`, { indent:{firstLine:INDENT} }),
+    p(`งวดที่ ${toThaiDigits(1)} วันที่ ${toThaiDigits(29)} พฤษภาคม ${toThaiDigits(s.year)}`, { indent:{firstLine:INDENT+360} }),
+    p(`งวดที่ ${toThaiDigits(2)} วันที่ ${toThaiDigits(12)} มิถุนายน ${toThaiDigits(s.year)}`, { indent:{firstLine:INDENT+360} }),
+    p(`งวดที่ ${toThaiDigits(3)} วันที่ ${toThaiDigits(26)} มิถุนายน ${toThaiDigits(s.year)}`, { indent:{firstLine:INDENT+360} }),
+    p(`งวดที่ ${toThaiDigits(4)} วันที่ ${toThaiDigits(10)} กรกฎาคม ${toThaiDigits(s.year)}`, { indent:{firstLine:INDENT+360} }),
+    p(`งวดที่ ${toThaiDigits(5)} วันที่ ${toThaiDigits(31)} กรกฎาคม ${toThaiDigits(s.year)}`, { indent:{firstLine:INDENT+360} }),
+    p(`${toThaiDigits(3)}. สถานที่ส่งมอบและนำเอกสารส่งมอบ ` + s.schoolName, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(4)}. ระยะเวลารับประกัน`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(5)}. สงวนสิทธิ์ค่าปรับกรณีส่งมอบเกินกำหนด โดยคิดค่าปรับเป็นรายวันในอัตราร้อยละ ${toThaiDigits('0.20')} ของมูลค่าตามใบสั่งจ้าง แต่จะต้องไม่ต่ำกว่าวันละ ${toThaiDigits(100)}.${toThaiDigits('00')} บาท`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(6)}. ส่วนราชการสงวนสิทธิ์ที่จะไม่รับมอบถ้าปรากฏว่างานจ้างนั้นมีลักษณะไม่ตรงตามรายการที่ระบุไว้ในใบสั่งจ้าง กรณีนี้ผู้รับจ้างจะต้องดำเนินการเปลี่ยนใหม่ให้ถูกต้องตามใบสั่งจ้างทุกประการ`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(7)}. กรณีงานจ้าง ผู้รับจ้างจะต้องไม่เอางานทั้งหมดหรือแต่บางส่วนแห่งสัญญานี้ไปจ้างช่วงอีกทอดหนึ่ง เว้นแต่การจ้างช่วงงานแต่บางส่วนที่ได้รับอนุญาตเป็นหนังสือจากผู้ว่าจ้างแล้ว`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(8)}. การส่งมอบงานและการจ่ายเงิน ผู้รับจ้างต้องสรุปรายการประกอบอาหารให้แก่ผู้ว่าจ้างเพื่อทำการเบิกจ่ายเงิน จำนวน ${toThaiDigits(5)} งวด โดยมีรายละเอียด ดังนี้`, { indent:{firstLine:INDENT} }),
+    ...buildPeriodSummary(),
+    p(`${toThaiDigits(9)}. เงื่อนไขการสั่งจ้างและการสิ้นสุดของใบสั่งจ้าง`, { indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`${toThaiDigits(9)}.${toThaiDigits(1)} ในการสั่งจ้างประกอบอาหารในครั้งนี้ กำหนดมูลค่าตามใบสั่งจ้างให้อยู่ภายในวงเงิน จำนวน ${thMoney(total)} บาท (${formatMoneyThai(total)}) โดยมีระยะเวลาดำเนินการภายใน ${toThaiDigits(15)} วัน นับถัดจากวันลงนามในใบสั่งจ้าง`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(9)}.${toThaiDigits(2)} การสั่งจ้างประกอบอาหารตามใบสั่งจ้าง จะสิ้นสุดลงเมื่อโรงเรียนเบิกจ่ายครบมูลค่าตามใบสั่งจ้าง หรือครบกำหนดระยะเวลาตามที่กำหนดในข้อ ${toThaiDigits(9)}.${toThaiDigits(1)} แล้วแต่เงื่อนไขใดถึงก่อน`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(10)}. เอกสารแนบท้ายใบสั่งจ้าง`, { indent:{firstLine:INDENT}, before: 240, keepNext: true }),
+    p(`${toThaiDigits(10)}.${toThaiDigits(1)} ขอบเขตของงาน การจ้างประกอบอาหารกลางวัน ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} จำนวน ${toThaiDigits(2)} หน้า`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(10)}.${toThaiDigits(2)} ใบเสนอราคา จำนวน ${toThaiDigits(1)} หน้า เอกสารแนบท้ายใบสั่งจ้างให้ถือเป็นเอกสารส่วนหนึ่งของใบสั่งจ้างฉบับนี้ กรณีเอกสารแนบท้ายขัดหรือแย้งกับใบสั่งจ้างฉบับนี้ ให้ใช้ใบสั่งจ้างนี้บังคับ`, { indent:{firstLine:INDENT} }),
+    twoSig(
+      ['ลงชื่อ..................................................ผู้สั่งจ้าง', `(${s.directorName})`, `ผู้อำนวยการ${s.schoolName}`, `วันที่  ${toThaiDate(s.issueDate)}`],
+      ['ลงชื่อ..................................................ผู้รับใบสั่งจ้าง', `(${s.contractorName})`, 'ผู้รับจ้าง', `วันที่  ${toThaiDate(s.issueDate)}`]
+    ),
+    p('หมายเหตุ', { bold: true, before: 480, keepNext: true }),
+    p(`${toThaiDigits(1)}. กรณีจ่ายจากเงินรายได้สถานศึกษาให้อ้างคำสั่งมอบอำนาจหน้าที่ ${toThaiDigits(1341)} /${toThaiDigits(2560)} ลงวันที่ ${toThaiDigits(24)} สิงหาคม ${toThaiDigits(2560)}`, { indent:{firstLine:360} }),
+    p(`${toThaiDigits(2)}. ปิดอากรแสตมป์ ${toThaiDigits(1)},${toThaiDigits(1000)} ละ ${toThaiDigits(1)} บาท เศษของ ${toThaiDigits(1000)} ให้ปิดเพิ่ม ${toThaiDigits(1)} บาท`, { indent:{firstLine:360} }),
+    p(`${toThaiDigits(3)}. กรณีวงเงินตั้งแต่ ${toThaiDigits(200)},${toThaiDigits(1000)} บาทให้สลักหลังตราสาร ณ สนง.สรรพากรพื้นที่`, { indent:{firstLine:360} }),
+  ];
+}
+function docAttachment() {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  return [
+    p('เอกสารแนบท้ายใบสั่งจ้าง', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }),
+    p(`การจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)}`, { align: AlignmentType.CENTER, keepNext: true }),
+    p(`${toThaiDigits(1)}. จำนวนนักเรียน ${toThaiDigits(s.studentCount)} คน ราคาคนละ ${toThaiDigits(s.pricePerStudent)} บาทต่อวัน จำนวน ${toThaiDigits(s.totalDays)} วัน`, { indent:{firstLine:INDENT}, before: 240 }),
+    p(`${toThaiDigits(2)}. รวมเป็นเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)})`, { indent:{firstLine:INDENT} }),
+    p(`${toThaiDigits(3)}. รายการอาหารปรุงสำเร็จ ตามตารางที่แนบ`, { indent:{firstLine:INDENT} }),
+    ...buildMenuTables(),
+    ...sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`),
+  ];
+}
 
 const DOCS = [
-  { id: 'assign_tor', name: '1. หนังสือแต่งตั้งผู้จัดทำ TOR' },
-  { id: 'order_committee', name: '2. คำสั่ง ที่ 48 แต่งตั้งคณะกรรมการ' },
-  { id: 'memo_tor', name: '3. บันทึกขอความเห็นชอบ TOR' },
-  { id: 'tor', name: '4. เอกสาร TOR / ขอบเขตของงาน' },
-  { id: 'memo_request', name: '5. บันทึกขอจ้าง' },
-  { id: 'inspection_order', name: '6. คำสั่ง ที่ 49 ตรวจรับพัสดุ' },
-  { id: 'quotation', name: '7. ใบเสนอราคา' },
-  { id: 'negotiation', name: '8. บันทึกผลเจรจาตกลงราคา' },
-  { id: 'approval', name: '9. บันทึกขออนุมัติสั่งจ้าง' },
-  { id: 'winner', name: '10. ประกาศผู้ชนะ' },
-  { id: 'po', name: '11. ใบสั่งจ้าง' },
-  { id: 'attachment', name: '12. เอกสารแนบท้ายใบสั่งจ้าง' },
+  { id: 'assign_tor', name: '1. หนังสือแต่งตั้งผู้จัดทำ TOR', build: docTOR_Assignment },
+  { id: 'order_committee', name: '2. คำสั่ง ที่ 48 แต่งตั้งคณะกรรมการ', build: docCommitteeOrder },
+  { id: 'memo_tor', name: '3. บันทึกขอความเห็นชอบ TOR', build: docMemoTOR },
+  { id: 'tor', name: '4. เอกสาร TOR / ขอบเขตของงาน', build: docTOR },
+  { id: 'memo_request', name: '5. บันทึกขอจ้าง', build: docMemoRequest },
+  { id: 'inspection_order', name: '6. คำสั่ง ที่ 49 ตรวจรับพัสดุ', build: docInspectionOrder },
+  { id: 'quotation', name: '7. ใบเสนอราคา', build: docQuotation },
+  { id: 'negotiation', name: '8. บันทึกผลเจรจาตกลงราคา', build: docNegotiation },
+  { id: 'approval', name: '9. บันทึกขออนุมัติสั่งจ้าง', build: docApproval },
+  { id: 'winner', name: '10. ประกาศผู้ชนะ', build: docWinner },
+  { id: 'po', name: '11. ใบสั่งจ้าง', build: docPurchaseOrder },
+  { id: 'attachment', name: '12. เอกสารแนบท้ายใบสั่งจ้าง', build: docAttachment },
 ];
 
 function renderDocuments() {
@@ -1090,15 +1104,159 @@ function previewDoc(id) {
   state.currentDoc = id; saveState();
   const d = DOCS.find(x => x.id === id); if (!d) return;
   document.getElementById('previewTitle').textContent = d.name;
-  document.getElementById('docPreview').innerHTML = `<div style="text-align:center;padding:2rem"><p style="font-size:18px;font-weight:bold">${d.name}</p><p style="color:#64748b;margin-top:1rem">⚠️ เอกสารนี้สร้างจาก <b>Master Template</b></p><p style="margin-top:2rem"><button onclick="goPage('templates')" style="background:#9333ea;color:white;padding:0.5rem 1rem;border-radius:0.5rem;cursor:pointer">ไปที่เทมเพลต</button></p></div>`;
+  document.getElementById('docPreview').innerHTML = buildHTMLPreview(id);
+  document.querySelectorAll('#docList button').forEach((b,i) => {
+    b.className = 'w-full text-left px-4 py-2.5 rounded-lg border ' + (DOCS[i].id===id ? 'bg-blue-50 border-blue-400 font-medium' : 'bg-white border-slate-200 hover:bg-slate-50');
+  });
+}
+function buildHTMLPreview(id) {
+  const s = state.settings;
+  const total = s.studentCount * s.pricePerStudent * s.totalDays;
+  const gL = state.garudaBase64 ? `<div style="float:left"><img src="${state.garudaBase64}" style="height:45px" /></div>` : '';
+  const gC = state.garudaBase64 ? `<div style="text-align:center;margin-bottom:6px"><img src="${state.garudaBase64}" style="height:113px" /></div>` : '';
+  const HR = `<hr style="border:none;border-top:1px solid #000;margin:4px 0" />`;
+  const memoHead = `${gL}<div style="text-align:center;font-size:18px;font-weight:bold">บันทึกข้อความ</div><br clear="all"/>`;
+  const rowLR = (l, r) => `<div style="display:flex;justify-content:space-between"><div>${l}</div><div>${r}</div></div>`;
+  const sigR = (name, pos, date) => `<div style="text-align:center;margin-top:28px">ลงชื่อ ...................................................${pos||''}<br>(${name})${date?'<br>'+date:''}</div>`;
+  const sigC = (name, pos, date) => `<div style="text-align:center;margin-top:28px">ลงชื่อ ...................................................<br>(${name})${pos?'<br>'+pos:''}${date?'<br>'+date:''}</div>`;
+  const schTable = () => {
+    if (!state.schedule.length) return '<p style="text-align:center;color:#94a3b8">(ยังไม่มีตารางอาหาร)</p>';
+    const groups = [[],[],[],[],[]];
+    state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+    return groups.map((items, i) => {
+      if (!items.length) return '';
+      return `<p style="text-align:center;font-weight:bold;margin-top:12px">รายการอาหารกลางวันในโรงเรียน ประจำงวดที่ ${toThaiDigits(i+1)}</p>
+      <table border="1" style="width:100%;border-collapse:collapse;font-size:13px">
+        <tr><th style="padding:4px;width:25%">วัน เดือน ปี</th><th>รายการอาหาร</th></tr>
+        ${items.map(it => `<tr><td style="padding:4px">${toThaiDateShort(it.date)}</td><td style="padding:4px">${menuLine(it)}</td></tr>`).join('')}
+      </table>`;
+    }).join('');
+  };
+  const periodTable = () => {
+    const groups = [[],[],[],[],[]];
+    state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+    const rows = groups.map((items, i) => {
+      if (!items.length) return '';
+      const amount = items.length * s.studentCount * s.pricePerStudent;
+      return `<tr><td style="padding:4px">งวดที่ ${toThaiDigits(i+1)}</td><td style="padding:4px">${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}</td><td style="padding:4px;text-align:center">${toThaiDigits(items.length)} วัน</td><td style="padding:4px;text-align:right">${thMoney(amount)} บาท</td></tr>`;
+    }).join('');
+    return `<table border="1" style="width:100%;border-collapse:collapse;font-size:13px"><tr><th style="padding:4px">งวด</th><th>ระยะเวลา</th><th>จำนวนวัน</th><th>จำนวนเงิน</th></tr>${rows}</table>`;
+  };
+  const di = 'text-indent:2.5em;text-align:justify;margin-top:6px';
+  switch(id) {
+    case 'assign_tor': return `${memoHead}
+      <p>ส่วนราชการ  ${s.schoolName}</p>${rowLR(`ที่  ${toThaiDigits(190)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`)}
+      <b>เรื่อง</b> แต่งตั้งผู้จัดทำร่างขอบเขตของงาน (Terms OF Reference : TOR)${HR}
+      <p style="margin-top:6px"><b>เรียน</b>  ผู้อำนวยการ${s.schoolName}</p>
+      <p style="${di}">ด้วย${s.schoolName} สังกัด${s.educationArea} ... งบประมาณ ${thMoney(total)} บาท ...</p>
+      <p style="text-align:center;margin:12px 0"><b>${s.torAuthor}</b>     ${s.torAuthorPosition}</p>
+      <p style="${di}">โดยมีหน้าที่ ...</p>
+      <p style="${di}">จึงเรียนมาเพื่อโปรดพิจารณาอนุมัติ</p>
+      <div style="display:flex;margin-top:24px"><div style="width:50%;text-align:center">ลงชื่อ...............................เจ้าหน้าที่<br>(${s.procurementOfficer})</div><div style="width:50%;text-align:center">ลงชื่อ..............................หัวหน้าเจ้าหน้าที่<br>(${s.chiefOfficer})</div></div>
+      <div style="text-align:center;margin-top:20px">□ ทราบ<br>□ อนุมัติ</div>
+      ${sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`)}`;
+    case 'order_committee': return `${gC}
+      <h2 style="text-align:center;font-weight:bold;font-size:18px;margin:0">คำสั่ง${s.schoolName}</h2>
+      <p style="text-align:center;margin:2px 0">ที่  ${toThaiDigits(48)} / ${toThaiDigits(s.year)}</p>
+      <p style="text-align:center;margin:2px 0">เรื่อง  แต่งตั้งคณะกรรมการร่างขอบเขตของงาน (TOR)</p>${HR}
+      <p style="${di}">ด้วย${s.schoolName} ... จำนวน ${toThaiDigits(1)} รายการ เป็นเงิน ${thMoney(total)} บาท ...</p>
+      <p style="text-align:center;font-weight:bold;margin:10px 0 0">ผู้จัดทำร่างขอบเขตของงาน (TOR)</p>
+      <p style="text-align:center;margin:2px 0">${s.torAuthor}  ตำแหน่ง  ${s.torAuthorPosition}</p>
+      ${sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`)}`;
+    case 'memo_tor': return `${memoHead}
+      <p>ส่วนราชการ  ${s.schoolName}</p>${rowLR(`ที่  ${toThaiDigits(191)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`)}
+      <b>เรื่อง</b> ขอความเห็นชอบการจัดทำขอบเขตของงาน (TOR)${HR}
+      <p style="margin-top:6px"><b>เรียน</b>  ผู้อำนวยการ${s.schoolName}</p>
+      <p style="${di}"><b>ความเดิม</b> — ตามที่ โรงเรียน${s.schoolName} ... จำนวนเงิน ${thMoney(total)} บาท ...</p>
+      ${sigR(s.torAuthor, 'ผู้จัดทำขอบเขตของงาน (TOR)')}`;
+    case 'tor': return `<p><b>${toThaiDigits(1)}. ความเป็นมา</b></p><p style="${di}">ตามพระราชบัญญัติการศึกษาแห่งชาติ พ.ศ. ${toThaiDigits(2542)} ...</p>
+      <p><b>${toThaiDigits(2)}. วัตถุประสงค์</b></p><p style="${di}">เพื่อจัดหาบุคคล ... จำนวน ${toThaiDigits(s.studentCount)} คน จำนวน ${toThaiDigits(s.totalDays)} วัน</p>
+      ${schTable()}
+      ${periodTable()}`;
+    case 'memo_request': return `${memoHead}
+      <p>ส่วนราชการ  ${s.schoolName}  ${s.educationArea}</p>${rowLR(`ที่  ${toThaiDigits(192)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`)}
+      <b>เรื่อง</b> รายงานขอจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ)${HR}
+      <p style="margin-top:6px"><b>เรียน</b>  ผู้อำนวยการ${s.schoolName}</p>
+      <ol style="margin-left:2rem"><li>เหตุผลและความจำเป็น</li><li>รายละเอียดของงาน</li><li>ราคากลาง — ${thMoney(total)} บาท</li><li>วงเงินที่จะจ้าง — ${thMoney(total)} บาท</li><li>กำหนดเวลา — ${toThaiDigits(s.totalDays)} วัน</li><li>วิธีจัดจ้าง — วิธีเฉพาะเจาะจง</li><li>หลักเกณฑ์ — เกณฑ์ราคา</li><li>การขออนุมัติแต่งตั้งคณะกรรมการ</li></ol>
+      ${sigR(s.procurementOfficer, 'เจ้าหน้าที่')}`;
+    case 'inspection_order': return `${gC}
+      <h2 style="text-align:center;font-weight:bold;font-size:18px;margin:0">คำสั่ง${s.schoolName}</h2>
+      <p style="text-align:center;margin:2px 0">ที่  ${toThaiDigits(49)} / ${toThaiDigits(s.year)}</p>
+      ${HR}
+      <ol style="margin-left:2rem">${state.committee.map(c => `<li>${c.name}  ตำแหน่ง ${c.position||'-'}  ${c.role}</li>`).join('')}</ol>
+      ${sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`)}`;
+    case 'quotation': return `<h2 style="text-align:center;font-weight:bold;font-size:18px">ใบเสนอราคา</h2>
+      <p style="text-align:right">วันที่  ${toThaiDate(s.issueDate)}</p>
+      <p>${toThaiDigits(1)}. ข้าพเจ้า ${s.contractorName} ... ${toThaiDigits(s.contractorAddress)} ...</p>
+      <p>${toThaiDigits(2)}. ข้าพเจ้าขอเสนอราคาเป็นเงินทั้งสิ้น ${thMoney(total)} บาท</p>
+      <div style="display:flex;margin-top:32px"><div style="width:50%;text-align:center">ลงชื่อ......................ผู้เจรจาตกลงราคา<br>(${s.procurementOfficer})<br>เจ้าหน้าที่</div><div style="width:50%;text-align:center">ลงชื่อ......................ผู้เสนอราคา<br>(${s.contractorName})</div></div>`;
+    case 'negotiation': return `<p>วันที่  ${toThaiDate(s.issueDate)}</p>
+      <p style="${di}">ตามที่ ${s.contractorName} ...</p>
+      ${sigR(s.contractorName, 'ตำแหน่งผู้จัดการ')}
+      ${sigR(s.procurementOfficer, 'เจ้าหน้าที่พัสดุ')}
+      ${sigR(s.chiefOfficer, 'หัวหน้าเจ้าหน้าที่')}`;
+    case 'approval': return `${memoHead}
+      <p>ส่วนราชการ  ${s.schoolName}</p>${rowLR(`ที่  ${toThaiDigits(193)} / ${toThaiDigits(s.year)}`, `วันที่  ${toThaiDate(s.issueDate)}`)}
+      ${sigR(s.procurementOfficer, 'เจ้าหน้าที่')}
+      ${sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(s.issueDate))}`;
+    case 'winner': return `${gC}
+      <h2 style="text-align:center;font-weight:bold;font-size:18px;margin:0">${s.schoolName}</h2>
+      <p style="text-align:center;font-weight:bold">ประกาศผู้ชนะการเสนอราคา</p>${HR}
+      <p style="${di}">ตามที่${s.schoolName} ... ผู้ได้รับการคัดเลือก ได้แก่ ${s.contractorName} ราคา ${thMoney(total)} บาท</p>
+      ${sigC(s.directorName, `ผู้อำนวยการ${s.schoolName}`)}`;
+    case 'po': return `${gC}
+      <h2 style="text-align:center;font-weight:bold;font-size:18px">ใบสั่งจ้าง</h2>
+      <div style="display:flex;justify-content:space-between"><div>ผู้รับจ้าง  ${s.contractorName}<br>ที่อยู่  ${toThaiDigits(s.contractorAddress)}</div><div style="text-align:right">ใบสั่งจ้างเลขที่  ${toThaiDigits(69)} / ${toThaiDigits(s.year)}<br>วันที่  ${toThaiDate(s.issueDate)}</div></div>
+      ${periodTable()}
+      <div style="display:flex;margin-top:24px"><div style="width:50%;text-align:center">ลงชื่อ..................ผู้สั่งจ้าง<br>(${s.directorName})</div><div style="width:50%;text-align:center">ลงชื่อ..................ผู้รับใบสั่งจ้าง<br>(${s.contractorName})</div></div>`;
+    case 'attachment': return `<h2 style="text-align:center;font-weight:bold;font-size:18px">เอกสารแนบท้ายใบสั่งจ้าง</h2>
+      <p>${toThaiDigits(1)}. จำนวนนักเรียน ${toThaiDigits(s.studentCount)} คน ราคาคนละ ${toThaiDigits(s.pricePerStudent)} บาทต่อวัน จำนวน ${toThaiDigits(s.totalDays)} วัน</p>
+      <p>${toThaiDigits(2)}. รวมเป็นเงิน ${thMoney(total)} บาท (${formatMoneyThai(total)})</p>
+      ${schTable()}
+      ${sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`)}`;
+  }
+  return '';
+}
+
+async function exportCurrentDocx() {
+  const d = DOCS.find(x => x.id === state.currentDoc); if (!d) return;
+  toast('กำลังสร้างไฟล์ Word...');
+  try {
+    const document = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
+      title: d.name, description: 'เอกสารจัดจ้างอาหารกลางวัน', revision: 1,
+      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
+      sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children: d.build() }],
+    });
+    const blob = await Packer.toBlob(document);
+    saveAs(blob, `${d.name.replace(/^\d+\.\s*/, '')}.docx`);
+    toast('ดาวน์โหลดสำเร็จ');
+  } catch(e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
+}
+async function exportAllDocs() {
+  if (!state.schedule.length && !confirm('ยังไม่มีตารางอาหาร ดำเนินการต่อ?')) return;
+  toast('กำลังสร้างไฟล์ Word รวม 12 ฉบับ...');
+  try {
+    const sections = DOCS.map((d) => ({
+      properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } },
+      children: d.build(),
+    }));
+    const document = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
+      title: `เอกสารจัดจ้างรวม ${state.settings.schoolName} ${state.settings.year}`,
+      description: 'เอกสารจัดจ้างอาหารกลางวันรวม 12 ฉบับ', revision: 1,
+      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
+      sections,
+    });
+    const blob = await Packer.toBlob(document);
+    saveAs(blob, `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`);
+    toast('ดาวน์โหลดสำเร็จ');
+  } catch (e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
   buildSettingsForm(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus();
   await loadGaruda(); renderGarudaPreview(); renderDocuments();
-  window.addEventListener('docx-templates-ready', () => { renderTemplates(); });
-  window.addEventListener('docx-templates-failed', () => { renderTemplates(); });
-  renderTemplates();
   if (Object.keys(state.periodAssignments).length === 0) {
     const days = buildWorkingDays();
     const counts = [10, 8, 10, 10, 12];
