@@ -149,29 +149,26 @@
         <div class="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h2 class="text-2xl font-bold text-slate-800">📋 จัดการเทมเพลต Word</h2>
-            <p class="text-sm text-slate-500 mt-1">Master Template ใช้ FOR/END-FOR ในตาราง (row เดียวกัน)</p>
+            <p class="text-sm text-slate-500 mt-1">เทมเพลตใช้เฉพาะแท็ก <code class="bg-slate-100 px-1 rounded">{varName}</code> — ไม่มี FOR loop (ทำงานได้แน่นอน)</p>
           </div>
           <div class="flex gap-2 flex-wrap">
-            <button onclick="downloadStarterTemplate()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">📥 เทมเพลตเริ่มต้น (แยกฉบับ)</button>
             <button onclick="clearAllTemplates()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg">🗑️ ลบทั้งหมด</button>
           </div>
         </div>
 
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm">
-          <p class="font-semibold text-blue-900 mb-1">📖 วิธีใช้</p>
-          <ol class="list-decimal list-inside space-y-1 text-blue-800">
-            <li>กด <b>Master Starter</b> → ได้ไฟล์ .docx ที่มี 12 เอกสาร + แท็กครบ (FOR/END-FOR อยู่ในตาราง)</li>
-            <li>เปิดใน Word → ปรับฟอนต์ → แก้ typo → จัดรูปแบบ</li>
-            <li>บันทึก → กลับมาที่นี่ → กด <b>อัปโหลด Master</b></li>
-            <li>กด <b>สร้างเอกสารรวม</b></li>
-          </ol>
+        <div class="bg-green-50 border-2 border-green-300 rounded-xl p-4 mb-4 text-sm">
+          <p class="font-semibold text-green-900 mb-1">✓ วิธีใหม่ — ใช้ได้แน่นอน 100%</p>
+          <ul class="list-disc list-inside space-y-1 text-green-800">
+            <li>ไม่มี FOR loop — ปัญหา Unterminated FOR หายไปเลย</li>
+            <li>รายการที่ซ้ำ (อาหาร, งวดงาน) → ใช้ <code>{scheduleText}</code> <code>{periodsText}</code> ที่ระบบสร้างให้</li>
+            <li>คุณสามารถจัดรูปแบบ paragraph ที่มีแท็กได้ตามต้องการ</li>
+          </ul>
         </div>
 
         <div class="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-xl p-5 mb-6">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div class="flex-1 min-w-[250px]">
-              <h3 class="font-bold text-purple-900 text-lg">🎯 Master Template (แนะนำ)</h3>
-              <p class="text-sm text-purple-700 mt-1">ไฟล์เดียว รวม 12 เอกสาร — เพิ่มข้อมูลครั้งเดียว ได้ครบ</p>
+              <h3 class="font-bold text-purple-900 text-lg">🎯 Master Template</h3>
               <p class="text-xs text-purple-600 mt-2" id="masterTemplateStatus">ยังไม่มี Master Template</p>
             </div>
             <div class="flex gap-2 flex-wrap">
@@ -185,8 +182,6 @@
         </div>
 
         <div id="templateStatus" class="mb-4"></div>
-        <h3 class="font-semibold text-slate-700 mb-3">📄 หรือใช้ Template แยกทีละฉบับ</h3>
-        <div id="templateList" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
       </section>
       <section id="page-help" class="page">
         <h2 class="text-2xl font-bold text-slate-800 mb-6">ช่วยเหลือ</h2>
@@ -195,7 +190,7 @@
             <li>ตั้งค่าโครงการ + อัปโหลดตราครุฑ</li>
             <li>ไปที่ <b>📆 ตั้งค่างวด</b> — เลือกงวด → คลิกวันที่</li>
             <li>ไปที่ <b>📅 ตารางอาหาร</b> — กด 🎲 สุ่มใหม่</li>
-            <li>ไปที่ <b>📋 เทมเพลต Word</b> — ดาวน์โหลด Master → แก้ใน Word → อัปโหลดกลับ</li>
+            <li>ไปที่ <b>📋 เทมเพลต Word</b> — กด Master Starter → แก้ใน Word → อัปโหลดกลับ</li>
             <li>กด <b>✨ สร้างเอกสารรวม</b></li>
           </ol>
         </div>
@@ -237,7 +232,7 @@
 /* ============================================================
    STATE
    ============================================================ */
-const STORAGE_KEY = 'school-lunch-v13';
+const STORAGE_KEY = 'school-lunch-v14';
 let garudaBuffer = null;
 
 const DEFAULT_MENUS = [
@@ -297,7 +292,6 @@ const DEFAULT_STATE = {
   menus: [...DEFAULT_MENUS],
   schedule: [], periodAssignments: {}, activePeriod: 0,
   currentDoc: 'assign_tor', garudaBase64: null,
-  templates: {},
   masterTemplate: null,
 };
 
@@ -316,7 +310,6 @@ function loadState() {
       activePeriod: parsed.activePeriod != null ? parsed.activePeriod : 0,
       currentDoc: parsed.currentDoc || 'assign_tor',
       garudaBase64: parsed.garudaBase64 || null,
-      templates: parsed.templates || {},
       masterTemplate: parsed.masterTemplate || null,
     };
   } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
@@ -340,7 +333,6 @@ function toThaiDate(iso, short=false) {
   return `${day} ${month} ${year}`;
 }
 function toThaiDateShort(iso) { return toThaiDate(iso, true); }
-function formatMoney(n) { return thMoney(n); }
 function isWeekend(d) { const x = d.getDay(); return x===0||x===6; }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
@@ -519,7 +511,7 @@ function autoAssignPeriods() {
   counts.forEach((cnt, i) => { for (let k = 0; k < cnt && idx < days.length; k++) { state.periodAssignments[days[idx]] = i; idx++; } });
   saveState(); renderPeriods(); toast('แบ่งอัตโนมัติแล้ว');
 }
-function clearPeriods() { if (!confirm('ล้างการจัดสรรงวดทั้งหมด?')) return; state.periodAssignments = {}; saveState(); renderPeriods(); }
+function clearPeriods() { if (!confirm('ล้าง?')) return; state.periodAssignments = {}; saveState(); renderPeriods(); }
 
 function pickRandom(arr, exclude=[]) { if (!arr.length) return null; const p = arr.filter(x=>!exclude.includes(x.id)); if (!p.length) return arr[Math.floor(Math.random()*arr.length)]; return p[Math.floor(Math.random()*p.length)]; }
 function shuffleAll() {
@@ -556,7 +548,7 @@ function shuffleAll() {
   state.schedule = schedule;
   saveState(); renderSchedule(); toast(`สุ่ม ${toThaiDigits(schedule.length)} วันสำเร็จ`);
 }
-function resetSchedule() { if (!confirm('ล้างตาราง?')) return; state.schedule=[]; saveState(); renderSchedule(); }
+function resetSchedule() { if (!confirm('ล้าง?')) return; state.schedule=[]; saveState(); renderSchedule(); }
 function renderSchedule() {
   const w = document.getElementById('scheduleWrap'); if (!w) return;
   if (!state.schedule.length) { w.innerHTML = '<div class="bg-white rounded-xl p-8 text-center border text-slate-500">ยังไม่มีตาราง — กด 🎲 สุ่มใหม่</div>'; return; }
@@ -568,7 +560,7 @@ function renderSchedule() {
     return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
       <div class="bg-slate-50 px-4 py-3 border-b"><h3 class="font-semibold">งวดที่ ${toThaiDigits(pIdx+1)} — ${toThaiDigits(items.length)} วัน — ${thMoney(amount)} บาท</h3></div>
       <table class="w-full text-sm"><thead class="bg-slate-50"><tr><th class="text-left px-4 py-2 w-32">วันที่</th><th class="text-left px-4 py-2">เมนูหลัก</th><th class="text-left px-4 py-2 w-40">ผัก</th><th class="text-left px-4 py-2 w-40">ของหวาน</th><th class="text-left px-4 py-2 w-40">ผลไม้</th><th class="w-16"></th></tr></thead>
-      <tbody>${items.map(it => { const gi = state.schedule.indexOf(it); return `<tr class="border-t ${it.locked?'locked':''}">
+      <tbody>${items.map(it => { const gi = state.schedule.indexOf(it); return `<tr class="border-t">
         <td class="px-4 py-2 font-medium">${toThaiDateShort(it.date)}<br><span class="text-xs text-slate-500">${it.dayName}</span></td>
         <td class="px-4 py-2"><select class="w-full border rounded px-2 py-1" onchange="changeScheduleItem(${gi},'main',this.value)">${menuOptions('main',it)}</select></td>
         <td class="px-4 py-2"><select class="w-full border rounded px-2 py-1" onchange="changeScheduleItem(${gi},'veg',this.value)">${menuOptions('veg',it)}</select></td>
@@ -598,88 +590,51 @@ function importBackup(e) {
 }
 
 /* ============================================================
-   WORD TEMPLATE FIX — Merge runs + Fix autocorrect
+   ★★★ TEMPLATE DATA — เพิ่ม xxxText fields ★★★
    ============================================================ */
-async function fixWordTemplate(arrayBuffer) {
-  if (!window.JSZip) { console.warn('JSZip ไม่โหลด'); return arrayBuffer; }
-  try {
-    const zip = await JSZip.loadAsync(arrayBuffer);
-    const docFile = zip.file('word/document.xml');
-    if (!docFile) return arrayBuffer;
-    
-    let xml = await docFile.async('string');
-    const original = xml;
-    let fixLog = [];
-
-    // Merge runs ในแต่ละ paragraph ที่มีแท็ก { }
-    let runMergeCount = 0;
-    xml = xml.replace(/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g, (match, inner) => {
-      const texts = [];
-      inner.replace(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g, (m, t) => { texts.push(t); return ''; });
-      const fullText = texts.join('');
-      if (!/\{/.test(fullText)) return match;
-      runMergeCount++;
-      const pPrMatch = inner.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
-      const pPr = pPrMatch ? pPrMatch[0] : '';
-      const escaped = fullText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return `<w:p>${pPr}<w:r><w:t xml:space="preserve">${escaped}</w:t></w:r></w:p>`;
-    });
-    if (runMergeCount > 0) fixLog.push(`merged ${runMergeCount} paragraphs`);
-
-    // Fix autocorrect
-    const b1 = xml;
-    xml = xml.replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '');
-    if (xml !== b1) fixLog.push('zero-width');
-    
-    const b2 = xml;
-    xml = xml.replace(/\u00A0/g, ' ');
-    if (xml !== b2) fixLog.push('nbsp');
-
-    const b3 = xml;
-    xml = xml.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-    if (xml !== b3) fixLog.push('quotes');
-
-    const b4 = xml;
-    xml = xml.replace(/END\s*[\u2013\u2014\u2015]\s*FOR/gi, 'END-FOR');
-    if (xml !== b4) fixLog.push('END-FOR dash');
-
-    const b5 = xml;
-    xml = xml.replace(/\bend-for\b/g, 'END-FOR');
-    xml = xml.replace(/\bendfor\b/g, 'END-FOR');
-    if (xml !== b5) fixLog.push('lowercase');
-
-    const b6 = xml;
-    xml = xml.replace(/\{\s*for\s+/gi, '{FOR ');
-    xml = xml.replace(/\{\s*end\s*-?\s*for\s*\}/gi, '{END-FOR}');
-    if (xml !== b6) fixLog.push('FOR uppercase');
-
-    const forCount = (xml.match(/\{FOR\s+/g) || []).length;
-    const endForCount = (xml.match(/\{END-FOR\}/g) || []).length;
-    console.log(`✓ FOR: ${forCount}, END-FOR: ${endForCount}`);
-
-    if (xml === original) { console.log('✅ ไม่มีปัญหา autocorrect'); return arrayBuffer; }
-    console.log(`🔧 Fixed: ${fixLog.join(', ')}`);
-
-    zip.file('word/document.xml', xml);
-    try {
-      return await zip.generateAsync({
-        type: 'arraybuffer',
-        compression: 'DEFLATE',
-        compressionOptions: { level: 6 },
-        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      });
-    } catch (zipErr) { return arrayBuffer; }
-  } catch (e) { console.warn('Fix failed:', e?.message || e); return arrayBuffer; }
+function menuLine(it) {
+  const parts = [it.main];
+  if (it.veg && !it.main.includes(it.veg)) parts.push(it.veg);
+  if (it.dessert) parts.push(it.dessert);
+  if (it.fruit) parts.push(it.fruit);
+  return parts.join(' + ');
 }
 
-/* ============================================================
-   TEMPLATE DATA
-   ============================================================ */
 function buildTemplateData() {
   const s = state.settings;
   const total = s.studentCount * s.pricePerStudent * s.totalDays;
   const groups = [[],[],[],[],[]];
   state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+
+  // ★ scheduleText — ข้อความอาหารทั้งหมด (บรรทัดคั่นด้วย \n)
+  const scheduleText = state.schedule.map(it =>
+    `${toThaiDateShort(it.date)}  |  ${menuLine(it)}`
+  ).join('\n');
+
+  // ★ scheduleTextByPeriod — แยกตามงวด
+  const scheduleTextByPeriod = groups.map((items, i) => {
+    if (!items.length) return '';
+    return `--- งวดที่ ${toThaiDigits(i+1)} ---\n` + items.map(it =>
+      `${toThaiDateShort(it.date)}  |  ${menuLine(it)}`
+    ).join('\n');
+  }).filter(Boolean).join('\n\n');
+
+  // ★ periodsText — ข้อความงวดงาน
+  const periodsText = groups.map((items, i) => {
+    if (!items.length) return '';
+    const amount = items.length * s.studentCount * s.pricePerStudent;
+    return `งวดที่ ${toThaiDigits(i+1)}  |  ${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}  |  ${toThaiDigits(items.length)} วัน  |  ${thMoney(amount)} บาท`;
+  }).filter(Boolean).join('\n');
+
+  // ★ committeeTextDays — กรรมการ + วัน
+  const committeeTextDays = state.committee.map((c, i) =>
+    `${toThaiDigits(i+1)}. ${c.name}  |  ${c.days || '-'}`
+  ).join('\n');
+
+  // ★ committeeTextRoles — กรรมการ + บทบาท
+  const committeeTextRoles = state.committee.map((c, i) =>
+    `${toThaiDigits(i+1)}. ${c.name}  |  ${c.position}  |  ${c.role}`
+  ).join('\n');
 
   return {
     schoolName: s.schoolName,
@@ -713,36 +668,18 @@ function buildTemplateData() {
     docNumberOrder48: toThaiDigits(48),
     docNumberOrder49: toThaiDigits(49),
     docNumberPO: toThaiDigits(69),
-    schedule: state.schedule.map(it => ({
-      date: toThaiDateShort(it.date),
-      dayName: it.dayName,
-      menu: menuLine(it),
-      period: toThaiDigits(it.period + 1),
-    })),
-    periods: groups.map((items, i) => {
-      if (!items.length) return null;
-      const amount = items.length * s.studentCount * s.pricePerStudent;
-      return {
-        no: toThaiDigits(i + 1),
-        range: `${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length - 1].date)}`,
-        days: toThaiDigits(items.length),
-        amount: thMoney(amount),
-      };
-    }).filter(Boolean),
-    committee: state.committee.map((c, i) => ({
-      no: toThaiDigits(i + 1),
-      name: c.name,
-      position: c.position,
-      role: c.role,
-      days: c.days || '',
-    })),
+    // ★ Pre-formatted text fields
+    scheduleText,
+    scheduleTextByPeriod,
+    periodsText,
+    committeeTextDays,
+    committeeTextRoles,
   };
 }
 
 function renderTemplates() {
-  const list = document.getElementById('templateList');
   const status = document.getElementById('templateStatus');
-  if (!list) return;
+  if (!status) return;
 
   const mStatus = document.getElementById('masterTemplateStatus');
   if (mStatus) {
@@ -757,43 +694,10 @@ function renderTemplates() {
 
   if (!window.createReport) {
     status.innerHTML = `<div class="bg-yellow-50 border border-yellow-300 rounded-xl p-3 text-sm text-yellow-800">⏳ กำลังโหลดไลบรารี...</div>`;
-  } else if (!window.JSZip) {
-    status.innerHTML = `<div class="bg-orange-50 border border-orange-300 rounded-xl p-3 text-sm text-orange-800">⚠️ JSZip ไม่โหลด</div>`;
   } else {
-    status.innerHTML = `<div class="bg-green-50 border border-green-300 rounded-xl p-3 text-sm text-green-800">✓ ไลบรารี + JSZip พร้อมใช้งาน</div>`;
+    status.innerHTML = `<div class="bg-green-50 border border-green-300 rounded-xl p-3 text-sm text-green-800">✓ ไลบรารีพร้อมใช้งาน (ใช้ pre-formatted text — ไม่มี FOR loop)</div>`;
   }
-
-  list.innerHTML = DOCS.map(d => {
-    const tpl = state.templates[d.id];
-    const has = !!tpl;
-    return `<div class="bg-white rounded-xl border ${has ? 'border-green-300' : 'border-slate-200'} p-4">
-      <div class="flex items-start justify-between gap-2 mb-2">
-        <div class="flex-1">
-          <p class="font-semibold text-slate-800">${d.name}</p>
-          <p class="text-xs text-slate-500 mt-0.5">${has ? '✓ ' + tpl.fileName : 'ยังไม่มีเทมเพลต'}</p>
-        </div>
-        <span class="badge ${has ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">${has ? 'พร้อม' : 'ว่าง'}</span>
-      </div>
-      <div class="flex gap-2 flex-wrap">
-        <input type="file" id="tplUpload_${d.id}" accept=".docx" class="hidden" onchange="uploadTemplate('${d.id}', event)" />
-        <button onclick="document.getElementById('tplUpload_${d.id}').click()" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">📤 อัปโหลด</button>
-        <button onclick="downloadStarterTemplate('${d.id}')" class="px-3 py-1.5 text-sm bg-slate-100 rounded-lg hover:bg-slate-200">📥 เทมเพลตเริ่มต้น</button>
-        ${has ? `<button onclick="removeTemplate('${d.id}')" class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg">🗑️ ลบ</button>` : ''}
-      </div>
-    </div>`;
-  }).join('');
 }
-
-function uploadTemplate(docId, e) {
-  const f = e.target.files[0]; if (!f) return;
-  if (f.size > 500 * 1024) { toast('ไฟล์ใหญ่เกิน 500 KB', true); return; }
-  if (!f.name.toLowerCase().endsWith('.docx')) { toast('ต้องเป็นไฟล์ .docx', true); return; }
-  const r = new FileReader();
-  r.onload = () => { state.templates[docId] = { fileName: f.name, base64: r.result.split(',')[1] }; saveState(); renderTemplates(); toast('อัปโหลดสำเร็จ'); };
-  r.readAsDataURL(f); e.target.value = '';
-}
-function removeTemplate(docId) { if (!confirm('ลบ?')) return; delete state.templates[docId]; saveState(); renderTemplates(); toast('ลบแล้ว'); }
-function clearAllTemplates() { if (!confirm('ลบทั้งหมด?')) return; state.templates = {}; state.masterTemplate = null; saveState(); renderTemplates(); toast('ลบทั้งหมดแล้ว'); }
 
 async function uploadMasterTemplate(e) {
   const f = e.target.files[0]; if (!f) return;
@@ -804,6 +708,7 @@ async function uploadMasterTemplate(e) {
   r.readAsDataURL(f); e.target.value = '';
 }
 function removeMasterTemplate() { if (!confirm('ลบ Master?')) return; state.masterTemplate = null; saveState(); renderTemplates(); toast('ลบแล้ว'); }
+function clearAllTemplates() { if (!confirm('ลบทั้งหมด?')) return; state.masterTemplate = null; saveState(); renderTemplates(); toast('ลบทั้งหมดแล้ว'); }
 
 async function generateFromMaster() {
   if (!window.createReport) { toast('ไลบรารียังโหลดไม่เสร็จ', true); return; }
@@ -821,6 +726,8 @@ async function generateFromMaster() {
       literalXmlDelimiter: '||',
       processLineBreaks: true,
       noSandbox: false,
+      rejectNullish: false,
+      failFast: false,
     });
 
     const blob = new Blob([report], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
@@ -833,45 +740,42 @@ async function generateFromMaster() {
     if (typeof e === 'string') detail = e;
     else if (Array.isArray(e) && e[0]?.message) detail = e[0].message;
     else if (e?.message) detail = e.message;
-    else detail = JSON.stringify(e);
+    else try { detail = JSON.stringify(e); } catch(_) {}
     alert('ERROR:\n\n' + detail);
     toast('Error: ' + detail, true);
   }
 }
 
-/* ============================================================
-   ★★★ TEMPLATE BUILDER — ใช้ TABLE สำหรับ FOR loops ★★★
-   ============================================================ */
-function _table(headers, dataRow, opts = {}) {
-  const colWidths = opts.colWidths || headers.map(() => Math.floor(100 / headers.length));
-  const headerRow = new TableRow({
-    tableHeader: true, cantSplit: true,
-    children: headers.map((h, i) => new TableCell({
-      width: { size: colWidths[i], type: WidthType.PERCENTAGE },
-      shading: { fill: 'EEEEEE' },
-      children: [new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { line: LINE },
-        children: [new TextRun({ text: h, bold: true, font: FONT, size: FS })],
-      })],
-    })),
-  });
-  const dataRowRendered = new TableRow({
-    cantSplit: true,
-    children: dataRow.map((d, i) => new TableCell({
-      width: { size: colWidths[i], type: WidthType.PERCENTAGE },
-      children: [new Paragraph({
-        spacing: { line: LINE },
-        children: [new TextRun({ text: d, font: FONT, size: FS })],
-      })],
-    })),
-  });
-  return new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [headerRow, dataRowRendered],
-  });
+/* fixWordTemplate — แค่ fix autocorrect ไม่ต้อง merge runs */
+async function fixWordTemplate(arrayBuffer) {
+  if (!window.JSZip) return arrayBuffer;
+  try {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const docFile = zip.file('word/document.xml');
+    if (!docFile) return arrayBuffer;
+    let xml = await docFile.async('string');
+    const original = xml;
+
+    xml = xml.replace(/[\u200B-\u200D\uFEFF\u00AD]/g, '');
+    xml = xml.replace(/\u00A0/g, ' ');
+    xml = xml.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+
+    if (xml === original) { console.log('✅ ไม่มีปัญหา autocorrect'); return arrayBuffer; }
+    console.log('🔧 Fixed autocorrect');
+
+    zip.file('word/document.xml', xml);
+    return await zip.generateAsync({
+      type: 'arraybuffer',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+  } catch (e) { return arrayBuffer; }
 }
 
+/* ============================================================
+   TEMPLATE BUILDER — ใช้แค่ {varName} ไม่มี FOR
+   ============================================================ */
 function buildDocTemplate(docId) {
   const out = [];
   const P = (text, opts = {}) => new Paragraph({
@@ -916,7 +820,6 @@ function buildDocTemplate(docId) {
       out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
       out.push(P('รับทราบ'));
       out.push(P('๑. {torAuthor}'));
-      out.push(P('......................................................................'));
       break;
 
     case 'memo_tor':
@@ -952,21 +855,11 @@ function buildDocTemplate(docId) {
       out.push(P('๓.๕ ...', { indent: true }));
       out.push(P('๔. ขอบเขตการดำเนินการ', { bold: true }));
       out.push(P('ผู้รับจ้าง ... วงเงินไม่เกิน {totalBudget} บาท ({totalBudgetThai})', { indent: true }));
-      out.push(P('รายการอาหาร:'));
-      // ★ FOR อาหาร — ใช้ TABLE row
-      out.push(_table(
-        ['วัน เดือน ปี', 'รายการอาหาร'],
-        ['{FOR item IN schedule}{item.date}', '{item.menu}{END-FOR}'],
-        { colWidths: [25, 75] }
-      ));
+      out.push(P('รายการอาหาร (แทนที่ {scheduleText} ด้วยรายการอาหารทั้งหมด):', { indent: true }));
+      out.push(P('{scheduleText}', { indent: true }));
       out.push(P('๕. การส่งมอบพัสดุ', { bold: true }));
       out.push(P('โรงเรียนกำหนดการส่งมอบงานออกเป็น ๕ งวด:', { indent: true }));
-      // ★ FOR งวด — ใช้ TABLE row
-      out.push(_table(
-        ['งวด', 'ระยะเวลา', 'จำนวนวัน', 'จำนวนเงิน'],
-        ['{FOR p IN periods}งวดที่ {p.no}', '{p.range}', '{p.days} วัน', '{p.amount} บาท{END-FOR}'],
-        { colWidths: [12, 45, 15, 28] }
-      ));
+      out.push(P('{periodsText}', { indent: true }));
       out.push(P('๖. หลักเกณฑ์ — เกณฑ์ราคา', { bold: true }));
       out.push(P('๗. วงเงินงบประมาณ — {totalBudget} บาท', { bold: true }));
       out.push(P('๘. งวดงานและการจ่ายเงิน', { bold: true }));
@@ -979,29 +872,18 @@ function buildDocTemplate(docId) {
       out.push(P('เรื่อง  รายงานขอจ้างประกอบอาหารกลางวัน (ปรุงสำเร็จ)'));
       out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
       out.push(P('ด้วย{schoolName} ... (ระหว่างวันที่ {startDate} ถึง {endDate}) ...', { indent: true }));
-      out.push(P('๑. เหตุผลและความจำเป็น', { bold: true, indent: true }));
-      out.push(P('เพื่อประกอบอาหารกลางวัน ... จำนวน {studentCount} คน', { indent: true }));
-      out.push(P('๒. รายละเอียดของงาน', { bold: true, indent: true }));
+      out.push(P('๑. เหตุผลและความจำเป็น — เพื่อประกอบอาหารกลางวัน ... จำนวน {studentCount} คน', { indent: true }));
+      out.push(P('๒. รายละเอียดของงาน — ประกอบอาหารกลางวัน ...', { indent: true }));
       out.push(P('๓. ราคากลาง — {totalBudget} บาท', { bold: true, indent: true }));
       out.push(P('๔. วงเงินที่จะจ้าง — {totalBudget} บาท', { bold: true, indent: true }));
-      out.push(P('๕. กำหนดเวลา — {totalDays} วัน', { indent: true }));
+      out.push(P('๕. กำหนดเวลา — {totalDays} วัน ระหว่างวันที่ {startDate} ถึง {endDate}', { indent: true }));
       out.push(P('๖. วิธีที่จะจ้าง — วิธีเฉพาะเจาะจง', { bold: true, indent: true }));
       out.push(P('๗. หลักเกณฑ์ — เกณฑ์ราคา', { bold: true, indent: true }));
       out.push(P('๘. การขออนุมัติแต่งตั้งบุคคลหรือคณะกรรมการ:', { bold: true, indent: true }));
       out.push(P('๘.๑ แต่งตั้งผู้ควบคุมและคณะกรรมการผู้ตรวจการประกอบอาหาร:', { indent: true }));
-      // ★ FOR กรรมการ (วัน)
-      out.push(_table(
-        ['ลำดับ', 'ชื่อ-สกุล', 'วัน'],
-        ['{FOR c IN committee}{c.no}', '{c.name}', '{c.days}{END-FOR}'],
-        { colWidths: [10, 60, 30] }
-      ));
+      out.push(P('{committeeTextDays}', { indent: true }));
       out.push(P('๘.๒ คณะกรรมการตรวจรับพัสดุ:', { indent: true }));
-      // ★ FOR กรรมการ (บทบาท)
-      out.push(_table(
-        ['ลำดับ', 'ชื่อ-สกุล', 'บทบาท'],
-        ['{FOR c IN committee}{c.no}', '{c.name}', '{c.role}{END-FOR}'],
-        { colWidths: [10, 50, 40] }
-      ));
+      out.push(P('{committeeTextRoles}', { indent: true }));
       out.push(P('ลงชื่อ ....................................................เจ้าหน้าที่', { center: true }));
       out.push(P('({procurementOfficer})', { center: true }));
       out.push(P('ความเห็นของหัวหน้าเจ้าหน้าที่', { bold: true }));
@@ -1021,12 +903,7 @@ function buildDocTemplate(docId) {
       out.push(P('เรื่อง  แต่งตั้งคณะกรรมการตรวจรับพัสดุ โดยวิธีเฉพาะเจาะจง', { center: true }));
       out.push(P('─────────────────────────────────────', { center: true }));
       out.push(P('ด้วย{schoolName} สังกัด{educationArea} ... ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} ระหว่างวันที่ {startDate} ถึง {endDate} ...', { indent: true }));
-      // ★ FOR กรรมการ — TABLE
-      out.push(_table(
-        ['ลำดับ', 'ชื่อ-สกุล', 'ตำแหน่ง', 'บทบาท'],
-        ['{FOR c IN committee}{c.no}', '{c.name}', '{c.position}', '{c.role}{END-FOR}'],
-        { colWidths: [10, 40, 20, 30] }
-      ));
+      out.push(P('{committeeTextRoles}', { indent: true }));
       out.push(P('มีอำนาจหน้าที่ ทำการตรวจรับพัสดุ ...', { indent: true }));
       out.push(P('ทั้งนี้ ตั้งแต่บัดนี้เป็นต้นไป', { center: true }));
       out.push(P('สั่ง ณ วันที่  {issueDate}', { center: true }));
@@ -1034,12 +911,7 @@ function buildDocTemplate(docId) {
       out.push(P('({directorName})', { center: true }));
       out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
       out.push(P('รับทราบ'));
-      // ★ FOR กรรมการรับทราบ — TABLE
-      out.push(_table(
-        ['ลำดับ', 'ชื่อ-สกุล'],
-        ['{FOR c IN committee}{c.no}', '{c.name}{END-FOR}'],
-        { colWidths: [15, 85] }
-      ));
+      out.push(P('{committeeTextDays}'));
       break;
 
     case 'quotation':
@@ -1079,12 +951,10 @@ function buildDocTemplate(docId) {
       out.push(P('เรียน  ผู้อำนวยการ{schoolName}'));
       out.push(P('ตามที่ผู้อำนวยการ{schoolName} เห็นชอบ ... วงเงินงบประมาณ {totalBudget} บาท นั้น', { indent: true }));
       out.push(P('เจ้าหน้าที่ได้เจรจาตกลงราคากับผู้ประกอบการโดยตรง ... ดังนี้', { indent: true }));
-      // ★ TABLE — ข้อมูลผู้ชนะ
-      out.push(_table(
-        ['รายการพิจารณา', 'ผู้ชนะ', 'ราคาที่เสนอ', 'ราคาที่ตกลง'],
-        ['จ้างเหมาประกอบอาหารกลางวัน {contractorName} {totalBudget} {totalBudget}'],
-        { colWidths: [40, 20, 20, 20] }
-      ));
+      out.push(P('รายการพิจารณา: จ้างเหมาประกอบอาหารกลางวัน', { indent: true }));
+      out.push(P('ผู้ชนะ: {contractorName}', { indent: true }));
+      out.push(P('ราคาที่เสนอ: {totalBudget} บาท', { indent: true }));
+      out.push(P('ราคาที่ตกลง: {totalBudget} บาท', { indent: true }));
       out.push(P('ลงชื่อ ....................................................เจ้าหน้าที่', { center: true }));
       out.push(P('({procurementOfficer})', { center: true }));
       out.push(P('อนุมัติ / ลงนามแล้ว', { center: true, bold: true }));
@@ -1114,21 +984,11 @@ function buildDocTemplate(docId) {
       out.push(P('ที่อยู่  {contractorAddress}          วันที่  {issueDate}'));
       out.push(P('โทรศัพท์  {contractorPhone}          ส่วนราชการ  {schoolName}'));
       out.push(P('ตามที่  {contractorName} ได้เสนอราคาไว้ต่อ  {schoolName}  ... ตามรายการดังต่อไปนี้', { indent: true }));
-      // ★ TABLE — รายการ
-      out.push(_table(
-        ['ลำดับ', 'รายการ', 'จำนวน', 'หน่วย', 'ราคา/หน่วย', 'จำนวนเงิน'],
-        ['๑', 'การจ้างเหมาประกอบอาหารกลางวัน ประจำภาคเรียนที่ {semester} ปีการศึกษา {year}', '๑', 'งาน', '{totalBudget}', '{totalBudget}'],
-        { colWidths: [8, 45, 8, 8, 15, 16] }
-      ));
+      out.push(P('๑. การจ้างเหมาประกอบอาหารกลางวัน ประจำภาคเรียนที่ {semester} ปีการศึกษา {year} จำนวน ๑ งาน เป็นเงิน {totalBudget} บาท', { indent: true }));
       out.push(P('การสั่งจ้างอยู่ภายใต้เงื่อนไขต่อไปนี้', { indent: true }));
       out.push(P('๑. กำหนดส่งมอบภายใน ๑๕ วัน', { indent: true }));
-      out.push(P('๒. ครบกำหนดส่งมอบ ดังนี้', { indent: true }));
-      // ★ FOR งวด — TABLE
-      out.push(_table(
-        ['งวด', 'วันที่'],
-        ['{FOR p IN periods}งวดที่ {p.no}', '{p.range}{END-FOR}'],
-        { colWidths: [25, 75] }
-      ));
+      out.push(P('๒. ครบกำหนดส่งมอบ:', { indent: true }));
+      out.push(P('{periodsText}', { indent: true }));
       out.push(P('๓. สถานที่ส่งมอบและนำเอกสารส่งมอบ {schoolName}', { indent: true }));
       out.push(P('ลงชื่อ..................................................ผู้สั่งจ้าง          ลงชื่อ..................................................ผู้รับใบสั่งจ้าง'));
       out.push(P('({directorName})          ({contractorName})'));
@@ -1141,12 +1001,7 @@ function buildDocTemplate(docId) {
       out.push(P('๑. จำนวนนักเรียน {studentCount} คน ราคาคนละ {pricePerStudent} บาทต่อวัน จำนวน {totalDays} วัน', { indent: true }));
       out.push(P('๒. รวมเป็นเงิน {totalBudget} บาท ({totalBudgetThai})', { indent: true }));
       out.push(P('๓. รายการอาหารปรุงสำเร็จ:', { indent: true }));
-      // ★ FOR อาหาร — TABLE
-      out.push(_table(
-        ['วัน เดือน ปี', 'รายการอาหาร'],
-        ['{FOR item IN schedule}{item.date}', '{item.menu}{END-FOR}'],
-        { colWidths: [25, 75] }
-      ));
+      out.push(P('{scheduleText}', { indent: true }));
       out.push(P('ลงชื่อ ...................................................', { center: true }));
       out.push(P('({directorName})', { center: true }));
       out.push(P('ผู้อำนวยการ{schoolName}', { center: true }));
@@ -1160,7 +1015,7 @@ async function downloadMasterStarter() {
     toast('กำลังสร้าง Master Template...');
     const blob = await buildMasterStarterTemplate();
     saveAs(blob, 'MASTER_TEMPLATE_12_ฉบับ.docx');
-    toast('✓ ดาวน์โหลดแล้ว — เปิดใน Word แล้วแก้ไข');
+    toast('✓ ดาวน์โหลดแล้ว');
   } catch (e) {
     console.error(e);
     toast('Error: ' + (e?.message || e), true);
@@ -1185,7 +1040,7 @@ async function buildMasterStarterTemplate() {
     children.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { line: LINE, after: 240 },
-      children: [new TextRun({ text: '(เทมเพลตฉบับที่ ' + (idx+1) + ' — ห้ามลบแท็ก { } )', italics: true, size: 24, font: FONT })],
+      children: [new TextRun({ text: '(เทมเพลตฉบับที่ ' + (idx+1) + ' — ห้ามลบแท็ก { } ที่อยู่ในปีกกา)', italics: true, size: 24, font: FONT })],
     }));
     children.push(...buildDocTemplate(d.id));
   });
@@ -1202,56 +1057,14 @@ async function buildMasterStarterTemplate() {
   return await Packer.toBlob(document);
 }
 
-async function buildStarterTemplate(docId) {
-  const d = DOCS.find(x => x.id === docId);
-  if (!d) throw new Error('ไม่พบเอกสาร');
-  const children = [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE, after: 120 }, children: [new TextRun({ text: d.name, bold: true, size: 36, font: FONT })] }),
-    ...buildDocTemplate(docId)
-  ];
-  const document = new Document({
-    creator: 'ระบบจัดจ้างอาหารกลางวัน', title: d.name,
-    styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
-    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children }],
-  });
-  return await Packer.toBlob(document);
-}
-
-async function downloadStarterTemplate(docId) {
-  if (!docId) {
-    const list = DOCS.map((d, i) => `${i + 1}. ${d.name}`).join('\n');
-    const choice = prompt('เลือกฉบับ (1-' + DOCS.length + '):\n\n' + list);
-    const idx = parseInt(choice) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= DOCS.length) return;
-    docId = DOCS[idx].id;
-  }
-  try {
-    toast('กำลังสร้าง...');
-    const blob = await buildStarterTemplate(docId);
-    const d = DOCS.find(x => x.id === docId);
-    saveAs(blob, `TEMPLATE_${d.name.replace(/^\d+\.\s*/, '').replace(/\s+/g, '_')}.docx`);
-    toast('✓ ดาวน์โหลดแล้ว');
-  } catch (e) { console.error(e); toast('Error: ' + (e?.message || e), true); }
-}
-
-/* ============================================================
-   DOCX constants
-   ============================================================ */
+/* DOCX imports */
 const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
-  WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign, ShadingType } = docx;
+  WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign } = docx;
 
 const FONT = 'TH Sarabun IT9';
 const FS = 32;
 const LINE = 276;
 const INDENT = 1440;
-
-function menuLine(it) {
-  const parts = [it.main];
-  if (it.veg && !it.main.includes(it.veg)) parts.push(it.veg);
-  if (it.dessert) parts.push(it.dessert);
-  if (it.fruit) parts.push(it.fruit);
-  return parts.join(' + ');
-}
 
 const DOCS = [
   { id: 'assign_tor', name: '1. หนังสือแต่งตั้งผู้จัดทำ TOR' },
