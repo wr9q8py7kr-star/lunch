@@ -20,7 +20,7 @@
   .doc-preview table { border-collapse: collapse; }
   .doc-preview img { max-width: 100%; height: auto; }
   .toast { position: fixed; bottom: 1rem; right: 1rem; left: 1rem; background: #16a34a; color: white; padding: 0.75rem 1.25rem; border-radius: 8px; opacity: 0; transition: opacity .3s; z-index: 9999; text-align: center; pointer-events: none; }
-  .toast.show { opacity: 1; } .toast.error { background: #dc2626; }
+  .toast.show { opacity: 1; } .toast.error { background: #dc2626; } .toast.info { background: #2563eb; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
   .period-tab { padding: 8px 12px; border-radius: 8px 8px 0 0; border: 1px solid #e2e8f0; border-bottom: none; background: #f8fafc; cursor: pointer; font-weight: 500; font-size: 13px; }
   .period-tab.active { background: #1e40af; color: white; border-color: #1e40af; }
@@ -43,10 +43,11 @@
   }
   @media print { .no-print { display: none !important; } }
   .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .conn-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .conn-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
   .conn-ok { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.2); }
   .conn-off { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.2); }
   .conn-sync { background: #f59e0b; animation: pulse 1s infinite; }
+  .conn-pending { background: #3b82f6; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
   .photo-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 2px solid #cbd5e1; }
   .photo-thumb.has-photo { border-color: #16a34a; }
@@ -58,6 +59,8 @@
   .exp-date { display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 6px; border: 1.5px solid #cbd5e1; font-size: 12px; cursor: pointer; user-select: none; background: white; }
   .exp-date.checked { background: #dcfce7; border-color: #22c55e; color: #166534; font-weight: 500; }
   .exp-date input { margin: 0; }
+  .sync-flash { animation: flash 1s; }
+  @keyframes flash { 0%,100% { background: transparent; } 50% { background: #fef3c7; } }
 </style>
 </head>
 <body>
@@ -97,9 +100,15 @@
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="files">📁 ไฟล์ของฉัน</button>
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="help">❓ ช่วยเหลือ</button>
   </nav>
-  <div class="p-3 text-xs text-slate-400 border-t space-y-1">
-    <div class="flex items-center gap-2"><span id="connDot" class="conn-dot conn-off"></span><span id="connText">ยังไม่เชื่อมต่อ</span></div>
-    <p class="mt-1" id="saveStatus">✓ พร้อมใช้งาน</p>
+
+  <!-- ✅ Sync Status Panel -->
+  <div class="p-3 text-xs border-t border-slate-200 bg-slate-50">
+    <div class="flex items-center gap-2 mb-1.5">
+      <span id="connDot" class="conn-dot conn-off"></span>
+      <span id="connText" class="font-medium text-slate-700">กำลังเชื่อมต่อ...</span>
+    </div>
+    <p class="text-[10px] text-slate-500" id="syncInfo">—</p>
+    <p class="text-[10px] text-slate-400 mt-0.5" id="saveStatus">พร้อมใช้งาน</p>
   </div>
 </aside>
 
@@ -120,7 +129,6 @@
             <button onclick="goPage('periods')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">📆 ตั้งค่างวด</button>
             <button onclick="shuffleAll()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">🎲 สุ่มตารางอาหาร</button>
             <button onclick="goPage('delivery')" class="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-medium">📤 ส่งออกเอกสาร</button>
-            <button onclick="syncToCloud()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium">☁️ บันทึกขึ้น Cloud</button>
           </div>
         </div>
         <div class="bg-white rounded-xl p-4 border"><h3 class="font-semibold mb-3">ข้อมูลโครงการ</h3>
@@ -140,19 +148,6 @@
       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">⚙️ ตั้งค่าโครงการ</h2>
       <form id="settingsForm" class="space-y-5">
         <div id="settingsGrid"></div>
-        <div class="bg-white rounded-xl p-4 border">
-          <h3 class="font-bold text-lg mb-2">🔗 Cloud Sync</h3>
-          <div class="flex flex-col sm:flex-row gap-2">
-            <input id="cloudUrlInput" type="text" class="flex-1 border rounded-lg px-3 py-2.5 text-sm" />
-            <button type="button" onclick="saveCloudUrl()" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg">บันทึก</button>
-            <button type="button" onclick="testCloudConnection()" class="px-4 py-2.5 bg-slate-100 rounded-lg">ทดสอบ</button>
-          </div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <button type="button" onclick="syncFromCloud(true)" class="px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm">⬇️ ดึงจาก Cloud</button>
-            <button type="button" onclick="syncToCloud()" class="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm">⬆️ ส่งขึ้น Cloud</button>
-            <button type="button" onclick="clearLocalStorageNow()" class="px-4 py-2.5 bg-red-100 text-red-700 rounded-lg text-sm">🗑️ ล้าง localStorage</button>
-          </div>
-        </div>
         <div class="bg-white rounded-xl p-4 border">
           <h3 class="font-bold text-lg mb-2">🦅 ตราครุฑ</h3>
           <div id="garudaPreview"></div>
@@ -230,13 +225,12 @@
             <button onclick="deliveryResetToContract()" class="px-3 py-2 bg-slate-100 rounded-lg text-xs">🔄 กลับไปใช้สัญญา</button>
           </div>
         </div>
-        <div class="text-[11px] text-slate-500 mb-3">💡 กดปุ่ม <b>📷</b> เพื่ออัปโหลดรูป — รูปจะถูกเก็บใน Google Drive ทันที</div>
+        <div class="text-[11px] text-slate-500 mb-3">💡 กดปุ่ม <b>📷</b> เพื่ออัปโหลดรูป — บันทึกใน Google Drive ทันที</div>
         <div id="deliveryScheduleEditor" class="max-h-[60vh] overflow-y-auto border rounded-lg"></div>
       </div>
 
       <div class="bg-white rounded-xl p-4 border mb-4">
         <h3 class="font-semibold mb-3 text-slate-800">✅ เลือกวันที่ต้องการส่งออก</h3>
-        <p class="text-xs text-slate-500 mb-3">คลิกชื่องวดเพื่อเปิดดูวันที่ แล้วเลือกวันที่ต้องการ (สีเขียว)</p>
         <div id="exportSelector" class="mb-4"></div>
         <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
           <div class="text-sm"><span class="text-slate-500">เลือกแล้ว:</span> <span id="expSummaryCount" class="font-semibold text-blue-700">0 วัน</span></div>
@@ -354,22 +348,26 @@
       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">ช่วยเหลือ</h2>
       <div class="space-y-4">
         <div class="bg-white rounded-xl p-4 sm:p-6 border">
+          <h3 class="font-bold mb-3">🔄 Real-time Sync</h3>
+          <p class="text-sm text-slate-700 mb-2">ระบบ<b>ซิงค์อัตโนมัติ</b>ทุกครั้งที่แก้ไข — ไม่ต้องกดปุ่ม</p>
+          <ul class="list-disc list-inside space-y-1 text-sm text-slate-700">
+            <li>ทุกการเปลี่ยนแปลง → บันทึกขึ้น Cloud อัตโนมัติ (~1.5 วิ)</li>
+            <li>เปิดหน้าเว็บ → โหลดข้อมูลล่าสุดจาก Cloud ทันที</li>
+            <li>ตรวจหาการเปลี่ยนแปลงจากเครื่องอื่นทุก 10 วิ</li>
+            <li>ถ้าข้อมูลชนกัน → ระบบเลือกเวอร์ชันล่าสุดให้อัตโนมัติ</li>
+          </ul>
+        </div>
+        <div class="bg-white rounded-xl p-4 sm:p-6 border">
           <h3 class="font-bold mb-3">📥 วิธีใช้</h3>
           <ol class="list-decimal list-inside space-y-1 text-sm text-slate-700">
-            <li>ไปที่ <b>📋 ส่งมอบงาน</b></li>
-            <li>ติ๊กเลือกวันที่ต้องการส่งออก</li>
-            <li>กด <b>📋 ดาวน์โหลดรายการอาหาร</b> หรือ <b>📦 ดาวน์โหลดงวด</b></li>
-            <li>ระบบจะดาวน์โหลดให้ + บันทึกขึ้น Drive อัตโนมัติ</li>
+            <li>แก้ไขข้อมูลตามปกติ — ระบบบันทึกอัตโนมัติ</li>
+            <li>ดูสถานะซิงค์ที่มุมล่างซ้าย (🟢 = ซิงค์แล้ว)</li>
+            <li>ทุกเครื่องจะเห็นข้อมูลตรงกันภายใน ~10 วินาที</li>
           </ol>
         </div>
         <div class="bg-white rounded-xl p-4 sm:p-6 border">
           <h3 class="font-bold mb-3">📷 รูปภาพ</h3>
-          <p class="text-sm text-slate-700">รูปจะถูกเก็บใน Google Drive (โฟลเดอร์ <code class="bg-slate-100 px-1 rounded">Lunch-2569/Photos</code>) โดย localStorage เก็บแค่ fileId → ไม่มีปัญหาเรื่องหน่วยความจำ</p>
-        </div>
-        <div class="bg-white rounded-xl p-4 sm:p-6 border">
-          <h3 class="font-bold mb-3">🗑️ ถ้าหน่วยความจำเต็ม</h3>
-          <p class="text-sm text-slate-700 mb-2">ไปที่ <b>⚙️ ตั้งค่าโครงการ</b> → กด <b>🗑️ ล้าง localStorage</b></p>
-          <p class="text-xs text-slate-500">ข้อมูลจะถูกล้างในเครื่อง แต่ไฟล์และรูปยังอยู่ใน Cloud → กด "ดึงจาก Cloud" เพื่อโหลดกลับ</p>
+          <p class="text-sm text-slate-700">รูปเก็บใน Google Drive (โฟลเดอร์ <code class="bg-slate-100 px-1 rounded">Lunch-2569/Photos</code>) — localStorage เก็บแค่ fileId</p>
         </div>
       </div>
     </section>
@@ -379,16 +377,294 @@
 <div id="toast" class="toast"></div>
 
 <script>
+// ============================================================
+// ⚙️ CONFIG
+// ============================================================
 const GARUDA_URL = './garuda.png';
-const STORAGE_KEY = 'school-lunch-v25';
+const STORAGE_KEY = 'school-lunch-v26';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4sSOXW-NLfTjbXQWqRQSV9o4LPtFfxNIp0wdWA2PWNOwi2FTzWHfz1_8ChtnhuKGN/exec';
+const CLIENT_ID = 'client-' + Math.random().toString(36).substring(2, 10);
+const SYNC_DEBOUNCE_MS = 1500;
+const POLL_INTERVAL_MS = 10000;
+
 let garudaBuffer = null;
 let cloudFiles = [];
 let exportSelection = new Set();
 let exportOpenPeriods = new Set();
 
-const MENU_CATS = ['ผัด', 'ต้ม', 'เส้น', 'น้ำพริก', 'ของหวาน', 'ผลไม้'];
+// ============================================================
+// 🔄 SYNC MODULE
+// ============================================================
+const syncState = {
+  isSyncing: false,
+  pendingSave: false,
+  lastSyncAt: null,
+  lastCloudVersion: 0,
+  pollTimer: null,
+  pushTimer: null,
+  initialLoadDone: false,
+  isApplyingRemote: false,  // ป้องกัน loop
+};
 
+function updateSyncUI(status) {
+  const dot = document.getElementById('connDot');
+  const dotM = document.getElementById('connDotMobile');
+  const txt = document.getElementById('connText');
+  const info = document.getElementById('syncInfo');
+  
+  const classMap = {
+    ok: 'conn-ok', off: 'conn-off', sync: 'conn-sync', pending: 'conn-pending'
+  };
+  const textMap = {
+    ok: '🟢 ซิงค์แล้ว', off: '🔴 ออฟไลน์', sync: '🟡 กำลังซิงค์...', pending: '🔵 มีการแก้ไข'
+  };
+  
+  const cls = classMap[status] || 'conn-off';
+  [dot, dotM].forEach(el => { if (el) el.className = 'conn-dot ' + cls; });
+  if (txt) txt.textContent = textMap[status] || '—';
+  if (info) {
+    if (syncState.lastSyncAt) {
+      const t = new Date(syncState.lastSyncAt).toLocaleTimeString('th-TH');
+      info.textContent = `ซิงค์ล่าสุด: ${t} (v${syncState.lastCloudVersion})`;
+    } else {
+      info.textContent = 'ยังไม่เคยซิงค์';
+    }
+  }
+}
+
+// ✅ Push ขึ้น Cloud (พร้อม conflict check)
+async function pushToCloud() {
+  if (!APPS_SCRIPT_URL) return false;
+  if (syncState.isSyncing) { syncState.pendingSave = true; return false; }
+  
+  syncState.isSyncing = true;
+  updateSyncUI('sync');
+  
+  try {
+    const payload = stateForCloud();
+    payload._version = state._version || 0;
+    payload._clientId = CLIENT_ID;
+    
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', data: payload, clientId: CLIENT_ID }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      redirect: 'follow'
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      state._version = data.version;
+      state._updatedAt = data.updatedAt;
+      syncState.lastCloudVersion = data.version;
+      syncState.lastSyncAt = Date.now();
+      saveStateLocal(true);
+      updateSyncUI('ok');
+      console.log(`✅ Push สำเร็จ v${data.version}`);
+      return true;
+    } else if (data.error === 'conflict') {
+      // คนอื่นแก้ก่อน → pull data ใหม่
+      console.warn('⚠️ Conflict - pulling latest from cloud');
+      toast('⚠️ มีการแก้ไขจากเครื่องอื่น — โหลดข้อมูลใหม่', 'info');
+      await applyCloudState(data.current, data.version);
+      updateSyncUI('ok');
+      return false;
+    } else if (data.error === 'locked') {
+      console.warn('🔒 Cloud locked - retry in 3s');
+      syncState.pendingSave = true;
+      setTimeout(() => { if (syncState.pendingSave) pushToCloud(); }, 3000);
+      return false;
+    } else {
+      console.error('Push failed:', data.error);
+      updateSyncUI('off');
+      return false;
+    }
+  } catch(e) {
+    console.error('pushToCloud error:', e);
+    updateSyncUI('off');
+    return false;
+  } finally {
+    syncState.isSyncing = false;
+    if (syncState.pendingSave) {
+      syncState.pendingSave = false;
+      setTimeout(pushToCloud, 300);
+    }
+  }
+}
+
+// ✅ Pull จาก Cloud (เฉพาะ version check ก่อน แล้วค่อยโหลดเต็มถ้าต่าง)
+async function pullFromCloud(forceFull = false) {
+  if (!APPS_SCRIPT_URL) return false;
+  if (syncState.isSyncing) return false;
+  
+  try {
+    // เช็ค version อย่างเร็ว
+    if (!forceFull) {
+      const vRes = await fetch(APPS_SCRIPT_URL + '?action=checkVersion');
+      const vData = await vRes.json();
+      if (!vData.ok) return false;
+      
+      if (vData.version <= syncState.lastCloudVersion) {
+        // Version เท่าเดิม → ไม่ต้องโหลด
+        syncState.lastSyncAt = Date.now();
+        updateSyncUI('ok');
+        return false;
+      }
+      console.log(`🔄 Cloud v${vData.version} > local v${syncState.lastCloudVersion} → pull`);
+    }
+    
+    // โหลดข้อมูลเต็ม
+    const res = await fetch(APPS_SCRIPT_URL + '?action=load');
+    const data = await res.json();
+    if (!data.ok || !data.data) return false;
+    
+    await applyCloudState(data.data, data.version);
+    return true;
+  } catch(e) {
+    console.error('pullFromCloud error:', e);
+    return false;
+  }
+}
+
+// ✅ Apply state จาก Cloud (ไม่ trigger push)
+async function applyCloudState(cloudData, version) {
+  syncState.isApplyingRemote = true;
+  
+  try {
+    const localGaruda = state.garudaBase64;  // เก็บรูปตราครุฑที่โหลดไว้
+    
+    state = {
+      settings: { ...DEFAULT_STATE.settings, ...(cloudData.settings || {}) },
+      delivery: { ...DEFAULT_STATE.delivery, ...(cloudData.delivery || {}), photos: cloudData.delivery?.photos || {} },
+      committee: cloudData.committee || DEFAULT_STATE.committee,
+      menus: cloudData.menus || DEFAULT_STATE.menus,
+      schedule: cloudData.schedule || [],
+      periodAssignments: cloudData.periodAssignments || {},
+      activePeriod: cloudData.activePeriod != null ? cloudData.activePeriod : 0,
+      currentDoc: cloudData.currentDoc || 'assign_tor',
+      garudaBase64: localGaruda,
+      _version: version,
+      _updatedAt: cloudData._updatedAt || new Date().toISOString(),
+    };
+    
+    syncState.lastCloudVersion = version;
+    syncState.lastSyncAt = Date.now();
+    
+    saveStateLocal(true);
+    refreshAllUI();
+    updateSyncUI('ok');
+    
+    console.log(`✅ Pull สำเร็จ v${version}`);
+  } finally {
+    // Delay ก่อนยกเลิก flag เพื่อให้ onChange ทั้งหลายเสร็จ
+    setTimeout(() => { syncState.isApplyingRemote = false; }, 500);
+  }
+}
+
+// ✅ Schedule push (debounce 1.5 วิ)
+function schedulePush() {
+  if (syncState.isApplyingRemote) return;
+  clearTimeout(syncState.pushTimer);
+  updateSyncUI('pending');
+  syncState.pushTimer = setTimeout(() => {
+    pushToCloud();
+  }, SYNC_DEBOUNCE_MS);
+}
+
+// ✅ Polling ทุก 10 วิ (หยุดเมื่อ tab hidden)
+function startPolling() {
+  stopPolling();
+  syncState.pollTimer = setInterval(() => {
+    if (!document.hidden) {
+      pullFromCloud(false);
+    }
+  }, POLL_INTERVAL_MS);
+}
+function stopPolling() {
+  if (syncState.pollTimer) { clearInterval(syncState.pollTimer); syncState.pollTimer = null; }
+}
+
+// ✅ Initial sync ตอนเปิดหน้า
+async function initialSync() {
+  if (!APPS_SCRIPT_URL) { updateSyncUI('off'); return; }
+  updateSyncUI('sync');
+  
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=load');
+    const data = await res.json();
+    
+    if (!data.ok) throw new Error(data.error || 'Load failed');
+    
+    const cloudVersion = data.version || 0;
+    const cloudHasData = data.data && data.data.settings && Object.keys(data.data.settings).length > 0;
+    const localHasData = state.schedule.length > 0 || Object.keys(state.periodAssignments).length > 0;
+    
+    if (!cloudHasData) {
+      // Cloud ว่าง → push local ขึ้นไป
+      console.log('📤 Cloud ว่าง → push local up');
+      syncState.lastCloudVersion = 0;
+      await pushToCloud();
+    } else if (cloudVersion >= (state._version || 0)) {
+      // Cloud ใหม่กว่า (หรือเท่ากัน) → ใช้ cloud
+      console.log(`📥 Cloud v${cloudVersion} ≥ local v${state._version || 0} → pull`);
+      await applyCloudState(data.data, cloudVersion);
+    } else {
+      // Local ใหม่กว่า (edge case) → push up
+      console.log(`📤 Local v${state._version} > cloud v${cloudVersion} → push`);
+      syncState.lastCloudVersion = cloudVersion;
+      await pushToCloud();
+    }
+    
+    updateSyncUI('ok');
+    syncState.initialLoadDone = true;
+  } catch(e) {
+    console.error('initialSync failed:', e);
+    updateSyncUI('off');
+  }
+}
+
+// ============================================================
+// 📦 STATE STORAGE
+// ============================================================
+function stateForCloud() {
+  const s = JSON.parse(JSON.stringify(state));
+  delete s.garudaBase64;  // โหลดจาก URL ทุกครั้ง
+  return s;
+}
+function stateForLocal() {
+  const s = JSON.parse(JSON.stringify(state));
+  delete s.garudaBase64;
+  if (s.delivery) s.delivery.photos = {};  // metadata รูปไม่เก็บ local (โหลดจาก cloud)
+  return s;
+}
+
+function saveStateLocal(silent = false) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateForLocal()));
+    if (!silent) {
+      const el = document.getElementById('saveStatus');
+      if (el) el.textContent = '✓ ' + new Date().toLocaleTimeString('th-TH');
+    }
+  } catch(e) {
+    if (e.name === 'QuotaExceededError') {
+      try {
+        localStorage.clear();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateForLocal()));
+      } catch(e2) {}
+    }
+  }
+}
+
+// ✅ saveState ใหม่ — เรียกใช้ทุกที่ที่แก้ข้อมูล
+function saveState(silent = false) {
+  saveStateLocal(silent);
+  schedulePush();
+}
+
+// ============================================================
+// 🏗️ DEFAULT STATE
+// ============================================================
+const MENU_CATS = ['ผัด', 'ต้ม', 'เส้น', 'น้ำพริก', 'ของหวาน', 'ผลไม้'];
 const DEFAULT_MENUS = [
   { id: 'p01', name: 'ข้าว + ไก่ทอด', cat: 'ผัด' }, { id: 'p02', name: 'ข้าว + ผัดกะเพรา', cat: 'ผัด' },
   { id: 'p03', name: 'ข้าว + พะแนงไก่', cat: 'ผัด' }, { id: 'p04', name: 'ข้าวมันไก่', cat: 'ผัด' },
@@ -446,11 +722,8 @@ const DEFAULT_STATE = {
     receiverAddress: '386 ม.1 ต.ดอยเต่า อ.ดอยเต่า จ.เชียงใหม่',
     senderName: 'นางชนม์นิภา  ทาปินตา',
     receiverDisplay: 'นายมนตรี  ก้องตา',
-    district: 'อำเภอดอยเต่า',
-    province: 'จังหวัดเชียงใหม่',
-    periodEndDates: {},
-    schedule: null,
-    photos: {},
+    district: 'อำเภอดอยเต่า', province: 'จังหวัดเชียงใหม่',
+    periodEndDates: {}, schedule: null, photos: {},
   },
   committee: [
     { id: 'c1', name: 'นายมนตรี  ก้องตา', position: 'ครู คศ.3', role: 'ประธานกรรมการ', days: 'จันทร์' },
@@ -460,15 +733,18 @@ const DEFAULT_STATE = {
   menus: [...DEFAULT_MENUS],
   schedule: [], periodAssignments: {}, activePeriod: 0,
   currentDoc: 'assign_tor', garudaBase64: null,
+  _version: 0, _updatedAt: null,
 };
 
-// ✅ loadState ปรับปรุง — กรอง base64 เก่าออก
+// ============================================================
+// 📥 LOAD STATE (Local)
+// ============================================================
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return JSON.parse(JSON.stringify(DEFAULT_STATE));
     const parsed = JSON.parse(raw);
-    const result = {
+    return {
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
       delivery: { ...DEFAULT_STATE.delivery, ...(parsed.delivery || {}), photos: {} },
       committee: parsed.committee || DEFAULT_STATE.committee,
@@ -477,69 +753,20 @@ function loadState() {
       periodAssignments: parsed.periodAssignments || {},
       activePeriod: parsed.activePeriod != null ? parsed.activePeriod : 0,
       currentDoc: parsed.currentDoc || 'assign_tor',
-      garudaBase64: parsed.garudaBase64 || null,
+      garudaBase64: null,
+      _version: parsed._version || 0,
+      _updatedAt: parsed._updatedAt || null,
     };
-    // ✅ กรองรูป base64 เก่าออกทันที
-    const oldPhotos = parsed.delivery?.photos || {};
-    let stripped = 0;
-    Object.entries(oldPhotos).forEach(([date, photo]) => {
-      if (photo && typeof photo === 'object' && photo.fileId) {
-        result.delivery.photos[date] = photo;
-      } else if (typeof photo === 'string' && photo.length > 500) {
-        stripped++;
-      }
-    });
-    if (stripped > 0) {
-      console.warn(`⚠️ ลบ base64 เก่า ${stripped} รูปออกจาก state`);
-      setTimeout(() => {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(result)); } catch(e){}
-      }, 100);
-    }
-    return result;
-  } catch(e) {
-    try { localStorage.removeItem(STORAGE_KEY); } catch(e2){}
-    return JSON.parse(JSON.stringify(DEFAULT_STATE));
-  }
-}
-
-// ✅ saveState ปรับปรุง — ไม่บันทึกรูปลง localStorage
-function saveState(silent=false) {
-  try {
-    const stateForStorage = JSON.parse(JSON.stringify(state));
-    if (stateForStorage.delivery) stateForStorage.delivery.photos = {};
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateForStorage));
-    if (!silent) { const el = document.getElementById('saveStatus'); if (el) el.textContent = '✓ บันทึก ' + new Date().toLocaleTimeString('th-TH'); }
-  } catch(e) {
-    if (e.name === 'QuotaExceededError') {
-      try {
-        localStorage.clear();
-        const clean = JSON.parse(JSON.stringify(state));
-        if (clean.delivery) clean.delivery.photos = {};
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
-        if (!silent) toast('⚠️ พื้นที่เต็ม — ล้างข้อมูลเก่าแล้ว');
-      } catch(e2) {
-        if (!silent) toast('⚠️ หน่วยความจำเต็ม', true);
-      }
-    }
-  }
-}
-
-// ✅ ล้าง localStorage แบบ manual
-function clearLocalStorageNow() {
-  if (!confirm('⚠️ จะลบข้อมูลทั้งหมดในเครื่อง (ไฟล์และรูปยังอยู่ใน Cloud)\n\nต้องการทำต่อ?')) return;
-  try {
-    localStorage.clear();
-    toast('ล้าง localStorage แล้ว — กำลังโหลดใหม่...');
-    setTimeout(() => location.reload(), 800);
-  } catch(e) { toast('ผิดพลาด: ' + e.message, true); }
+  } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
 }
 
 let state = loadState();
 
-function toast(m, err=false) {
+function toast(m, type='ok') {
   const el = document.getElementById('toast');
   el.textContent = m;
-  el.className = 'toast show' + (err?' error':'');
+  const cls = type === 'error' ? 'error' : (type === 'info' ? 'info' : '');
+  el.className = 'toast show ' + cls;
   setTimeout(()=>el.className='toast', 3500);
 }
 
@@ -616,75 +843,6 @@ function renderGarudaPreview() {
   else el.innerHTML = `<div class="text-sm"><span class="text-orange-600">⚠️ ยังไม่พบ garuda.png</span></div>`;
 }
 
-function updateConnUI(status) {
-  const dot = document.getElementById('connDot');
-  const dotM = document.getElementById('connDotMobile');
-  const txt = document.getElementById('connText');
-  [dot, dotM].forEach(el => { if (!el) return; el.className = 'conn-dot ' + (status === 'ok' ? 'conn-ok' : status === 'sync' ? 'conn-sync' : 'conn-off'); });
-  if (txt) txt.textContent = status === 'ok' ? 'เชื่อมต่อแล้ว' : status === 'sync' ? 'กำลังซิงค์...' : 'ยังไม่เชื่อมต่อ';
-}
-function saveCloudUrl() { localStorage.setItem('cloudUrl', document.getElementById('cloudUrlInput').value.trim()); toast('บันทึก URL แล้ว'); testCloudConnection(); }
-async function testCloudConnection() {
-  if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า URL', true); return; }
-  try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=ping');
-    const data = await res.json();
-    if (data.ok) { updateConnUI('ok'); toast('เชื่อมต่อสำเร็จ'); }
-    else { updateConnUI('off'); toast('ตอบกลับผิดพลาด', true); }
-  } catch(e) { updateConnUI('off'); toast('เชื่อมต่อไม่สำเร็จ', true); }
-}
-async function syncToCloud(silent=false) {
-  if (!APPS_SCRIPT_URL) { if (!silent) toast('ยังไม่ได้ตั้งค่า Cloud URL', true); return false; }
-  updateConnUI('sync');
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'save', data: state }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow' });
-    const data = await res.json();
-    if (data.ok) { updateConnUI('ok'); if (!silent) toast('บันทึกขึ้น Cloud สำเร็จ'); return true; }
-    updateConnUI('off'); if (!silent) toast('บันทึกไม่สำเร็จ', true); return false;
-  } catch(e) { updateConnUI('off'); if (!silent) toast('ผิดพลาด: ' + e.message, true); return false; }
-}
-async function syncFromCloud(force=false) {
-  if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า Cloud URL', true); return; }
-  if (force && !confirm('⚠️ จะล้างข้อมูลในเครื่อง และดึงจาก Cloud แทน?')) return;
-  updateConnUI('sync');
-  try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=load');
-    const data = await res.json();
-    if (data.ok && data.data) {
-      const cloud = data.data;
-      state = {
-        settings: { ...DEFAULT_STATE.settings, ...(cloud.settings || {}) },
-        delivery: { ...DEFAULT_STATE.delivery, ...(cloud.delivery || {}), photos: cloud.delivery?.photos || {} },
-        committee: cloud.committee || DEFAULT_STATE.committee,
-        menus: cloud.menus || DEFAULT_STATE.menus,
-        schedule: cloud.schedule || [],
-        periodAssignments: cloud.periodAssignments || {},
-        activePeriod: cloud.activePeriod != null ? cloud.activePeriod : 0,
-        currentDoc: cloud.currentDoc || 'assign_tor',
-        garudaBase64: state.garudaBase64,
-      };
-      saveState(true); refreshAllUI(); updateConnUI('ok'); toast('ดึงข้อมูลจาก Cloud สำเร็จ');
-    } else { updateConnUI('off'); toast('Cloud ยังไม่มีข้อมูล', true); }
-  } catch(e) { updateConnUI('off'); toast('ผิดพลาด: ' + e.message, true); }
-}
-async function loadPhotosFromCloud() {
-  if (!APPS_SCRIPT_URL) return;
-  try {
-    const res = await fetch(APPS_SCRIPT_URL + '?action=load');
-    const data = await res.json();
-    if (data.ok && data.data && data.data.delivery && data.data.delivery.photos) {
-      const cloudPhotos = data.data.delivery.photos || {};
-      const count = Object.keys(cloudPhotos).length;
-      if (count > 0) {
-        state.delivery.photos = cloudPhotos;
-        renderDeliverySchedule();
-        updateDashboard();
-        console.log(`✅ โหลด ${count} รูปจาก Cloud`);
-      }
-    }
-  } catch(e) { console.warn('loadPhotosFromCloud failed:', e); }
-}
-
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
@@ -714,7 +872,7 @@ async function validateDocx(blob) {
 async function uploadWordToCloud(blob, filename, subFolder) {
   if (!APPS_SCRIPT_URL) return null;
   try {
-    if (!(await validateDocx(blob))) { toast('ไฟล์ Word เสีย', true); return null; }
+    if (!(await validateDocx(blob))) { toast('ไฟล์ Word เสีย', 'error'); return null; }
     const base64 = arrayBufferToBase64(await blob.arrayBuffer());
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
@@ -758,6 +916,9 @@ function getImageDimensions(dataUrl) {
   });
 }
 
+// ============================================================
+// ⚙️ SETTINGS
+// ============================================================
 const SETTINGS_GROUPS = [
   { title: '🏫 ข้อมูลโรงเรียน', color: 'blue', fields: [
       ['schoolName', 'ชื่อโรงเรียน', 'text'], ['educationArea', 'สังกัด', 'text'],
@@ -817,8 +978,6 @@ function buildSettingsForm() {
 function fillSettingsForm() {
   const f = document.getElementById('settingsForm');
   for (const [k,v] of Object.entries(state.settings)) { const i = f.elements[k]; if (i) i.value = v; }
-  const urlInput = document.getElementById('cloudUrlInput');
-  if (urlInput) urlInput.value = APPS_SCRIPT_URL;
 }
 document.getElementById('settingsForm').onsubmit = (e) => {
   e.preventDefault();
@@ -828,6 +987,9 @@ document.getElementById('settingsForm').onsubmit = (e) => {
 };
 function resetSettings() { if (!confirm('คืนค่าเริ่มต้น?')) return; state.settings = {...DEFAULT_STATE.settings}; fillSettingsForm(); saveState(); updateDashboard(); }
 
+// ============================================================
+// 👥 COMMITTEE
+// ============================================================
 function renderCommittee() {
   const b = document.getElementById('committeeBody'); if (!b) return;
   b.innerHTML = state.committee.map((c,i) => `<tr class="border-b">
@@ -842,6 +1004,9 @@ function updateCommittee(i,k,v) { state.committee[i][k]=v; saveState(); }
 function removeCommittee(i) { state.committee.splice(i,1); saveState(); renderCommittee(); }
 function addCommittee() { state.committee.push({ id:'c'+Date.now(), name:'', position:'', role:'กรรมการ', days:'' }); saveState(); renderCommittee(); }
 
+// ============================================================
+// 🍽️ MENUS
+// ============================================================
 function renderMenus() {
   const q = (document.getElementById('menuSearch')?.value||'').toLowerCase();
   const f = (document.getElementById('menuFilter')?.value||'');
@@ -878,6 +1043,9 @@ function updateDashboard() {
   el('dashFileCount').textContent = cloudFiles.length;
 }
 
+// ============================================================
+// 📆 PERIODS
+// ============================================================
 function buildWorkingDays() {
   const out = []; let d = new Date(state.settings.startDate); const end = new Date(state.settings.endDate);
   while (d <= end && out.length < state.settings.totalDays) { if (!isWeekend(d)) out.push(isoDate(d)); d = addDays(d, 1); }
@@ -937,9 +1105,12 @@ function autoAssignPeriods() {
 }
 function clearPeriods() { if (!confirm('ล้าง?')) return; state.periodAssignments = {}; saveState(); renderPeriods(); }
 
+// ============================================================
+// 🎲 SHUFFLE
+// ============================================================
 function shuffleAll() {
   const days = buildWorkingDays();
-  if (!days.length) { toast('ไม่มีวันทำการ', true); return; }
+  if (!days.length) { toast('ไม่มีวันทำการ', 'error'); return; }
   const start = new Date(state.settings.startDate);
   const weekMap = new Map();
   days.forEach(dateStr => {
@@ -1040,20 +1211,23 @@ function changeScheduleItem(idx, f, v) {
   saveState(); renderSchedule();
 }
 
+// ============================================================
+// 📋 DELIVERY
+// ============================================================
 function getDeliverySchedule() {
   if (state.delivery.schedule && Array.isArray(state.delivery.schedule) && state.delivery.schedule.length) return state.delivery.schedule;
   return state.schedule;
 }
 function isDeliveryIndependent() { return !!(state.delivery.schedule && state.delivery.schedule.length); }
 function deliveryPullFromContract() {
-  if (!state.schedule.length) { toast('ไม่มีตารางสัญญา', true); return; }
+  if (!state.schedule.length) { toast('ไม่มีตารางสัญญา', 'error'); return; }
   if (isDeliveryIndependent() && !confirm('จะทับตารางส่งมอบ?')) return;
   state.delivery.schedule = JSON.parse(JSON.stringify(state.schedule));
   saveState(); renderDelivery(); toast('ดึงจากสัญญาแล้ว');
 }
 function deliveryMakeIndependent() {
   if (isDeliveryIndependent()) { toast('เป็นอิสระอยู่แล้ว'); return; }
-  if (!state.schedule.length) { toast('ไม่มีตารางสัญญา', true); return; }
+  if (!state.schedule.length) { toast('ไม่มีตารางสัญญา', 'error'); return; }
   state.delivery.schedule = JSON.parse(JSON.stringify(state.schedule));
   saveState(); renderDelivery(); toast('แยกเป็นอิสระแล้ว');
 }
@@ -1064,31 +1238,27 @@ function deliveryResetToContract() {
   saveState(); renderDelivery(); toast('กลับไปใช้สัญญาแล้ว');
 }
 function changeDeliveryItem(idx, f, v) {
-  if (!isDeliveryIndependent()) { toast('กรุณากด "แยกเป็นอิสระ" ก่อน', true); return; }
+  if (!isDeliveryIndependent()) { toast('กรุณากด "แยกเป็นอิสระ" ก่อน', 'error'); return; }
   state.delivery.schedule[idx][f] = v;
   if (f === 'main') { const m = state.menus.find(x => x.name === v); state.delivery.schedule[idx].mainCat = m ? m.cat : ''; }
   saveState(); renderDeliverySchedule();
 }
-
 async function uploadPhotoForDay(dateStr) {
   const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
+  input.type = 'file'; input.accept = 'image/*';
   input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 10 MB', true); return; }
-    toast('กำลังบีบอัดรูป...');
+    if (file.size > 10 * 1024 * 1024) { toast('ไฟล์ใหญ่เกิน 10 MB', 'error'); return; }
+    toast('กำลังบีบอัดรูป...', 'info');
     try {
       const result = await compressImage(file, 500, 0.55);
-      toast('กำลังอัปโหลดขึ้น Drive...');
-
-      if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า Cloud URL', true); return; }
+      toast('กำลังอัปโหลดขึ้น Drive...', 'info');
+      if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า Cloud URL', 'error'); return; }
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'uploadPhoto', dateStr: dateStr, base64: result.dataUrl }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow'
+        body: JSON.stringify({ action: 'uploadPhoto', dateStr, base64: result.dataUrl }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow'
       });
       const data = await res.json();
       if (data.ok) {
@@ -1101,16 +1271,12 @@ async function uploadPhotoForDay(dateStr) {
         saveState();
         renderDeliverySchedule();
         updateDashboard();
-        await syncToCloud(true);
-        toast('อัปโหลดสำเร็จ (บันทึกใน Drive)');
-      } else {
-        toast('อัปโหลดล้มเหลว: ' + (data.error || ''), true);
-      }
-    } catch(err) { console.error(err); toast('ผิดพลาด: ' + err.message, true); }
+        toast('อัปโหลดสำเร็จ');
+      } else { toast('อัปโหลดล้มเหลว: ' + (data.error || ''), 'error'); }
+    } catch(err) { console.error(err); toast('ผิดพลาด: ' + err.message, 'error'); }
   };
   input.click();
 }
-
 async function removePhotoForDay(dateStr) {
   if (!confirm('ลบรูปของวันนี้?')) return;
   const photo = state.delivery.photos?.[dateStr];
@@ -1119,8 +1285,7 @@ async function removePhotoForDay(dateStr) {
       await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'deletePhoto', fileId: photo.fileId }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow'
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow'
       });
     } catch(e) { console.warn('Delete photo failed:', e); }
   }
@@ -1226,6 +1391,9 @@ function updatePeriodDate(i, val) {
   });
 });
 
+// ============================================================
+// ✅ EXPORT SELECTOR
+// ============================================================
 function renderExportSelector() {
   const el = document.getElementById('exportSelector'); if (!el) return;
   const schedule = getDeliverySchedule();
@@ -1291,16 +1459,14 @@ function expSelectAll() { const schedule = getDeliverySchedule(); schedule.forEa
 function expSelectNone() { exportSelection.clear(); renderExportSelector(); }
 
 async function downloadFoodList() {
-  if (exportSelection.size === 0) { toast('กรุณาเลือกวันที่ต้องการส่งออก', true); return; }
+  if (exportSelection.size === 0) { toast('กรุณาเลือกวันที่ต้องการส่งออก', 'error'); return; }
   const schedule = getDeliverySchedule();
   const selectedDates = [...exportSelection].sort();
   const selectedItems = selectedDates.map(d => schedule.find(it => it.date === d)).filter(Boolean);
-  if (!selectedItems.length) { toast('ไม่พบข้อมูลวันที่เลือก', true); return; }
-
+  if (!selectedItems.length) { toast('ไม่พบข้อมูลวันที่เลือก', 'error'); return; }
   const prog = document.getElementById('dv_progress');
   if (prog) prog.textContent = 'กำลังสร้างไฟล์รายการอาหาร...';
-  toast('กำลังสร้างไฟล์...');
-
+  toast('กำลังสร้างไฟล์...', 'info');
   try {
     const withPhotos = state.delivery.photos && Object.keys(state.delivery.photos).length > 0;
     const children = await buildFoodListChildren(selectedItems, withPhotos);
@@ -1313,28 +1479,23 @@ async function downloadFoodList() {
     const dateRange = selectedItems.length ? `${selectedItems[0].date}_${selectedItems[selectedItems.length-1].date}` : 'empty';
     const filename = `รายการอาหาร-${dateRange}-${state.settings.schoolName}.docx`;
     saveAs(blob, filename);
-    toast('ดาวน์โหลดแล้ว — กำลังบันทึกขึ้น Cloud...');
     if (prog) prog.textContent = 'กำลังอัปโหลดขึ้น Drive...';
-    const up = await uploadWordToCloud(blob, filename, 'รายการอาหาร');
-    if (up) { toast('บันทึกขึ้น Drive สำเร็จ'); if (prog) prog.textContent = `✓ สร้างไฟล์ ${toThaiDigits(selectedItems.length)} วัน เรียบร้อย`; }
-    await syncToCloud(true);
+    await uploadWordToCloud(blob, filename, 'รายการอาหาร');
+    if (prog) prog.textContent = `✓ สร้างไฟล์ ${toThaiDigits(selectedItems.length)} วัน เรียบร้อย`;
     setTimeout(refreshFiles, 1500);
-  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); if (prog) prog.textContent = 'ผิดพลาด'; }
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, 'error'); if (prog) prog.textContent = 'ผิดพลาด'; }
 }
-
 async function downloadPeriod() {
-  if (exportSelection.size === 0) { toast('กรุณาเลือกวันที่ต้องการส่งออก', true); return; }
+  if (exportSelection.size === 0) { toast('กรุณาเลือกวันที่', 'error'); return; }
   const schedule = getDeliverySchedule();
   const selectedDates = [...exportSelection].sort();
   const selectedItems = selectedDates.map(d => schedule.find(it => it.date === d)).filter(Boolean);
-  if (!selectedItems.length) { toast('ไม่พบข้อมูลวันที่เลือก', true); return; }
-
+  if (!selectedItems.length) { toast('ไม่พบข้อมูล', 'error'); return; }
   const prog = document.getElementById('dv_progress');
-  toast('กำลังสร้างเอกสารงวด...');
+  toast('กำลังสร้างเอกสารงวด...', 'info');
   const byPeriod = {};
   selectedItems.forEach(it => { if (!byPeriod[it.period]) byPeriod[it.period] = []; byPeriod[it.period].push(it); });
   const periodKeys = Object.keys(byPeriod).sort((a,b) => a - b);
-
   try {
     for (const pIdxStr of periodKeys) {
       const pIdx = Number(pIdxStr);
@@ -1342,13 +1503,11 @@ async function downloadPeriod() {
       await exportPeriodDoc(pIdx);
       await new Promise(r => setTimeout(r, 1200));
     }
-    await syncToCloud(true);
     if (prog) prog.textContent = `✓ สร้างเอกสาร ${periodKeys.length} งวด เรียบร้อย`;
     toast(`สร้างเสร็จ ${periodKeys.length} งวด`);
     setTimeout(refreshFiles, 1500);
-  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); if (prog) prog.textContent = 'ผิดพลาด'; }
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, 'error'); if (prog) prog.textContent = 'ผิดพลาด'; }
 }
-
 async function exportPeriodDoc(pIdx) {
   const children = buildPeriodChildren(pIdx, getDeliverySchedule());
   const doc = new Document({
@@ -1359,16 +1518,17 @@ async function exportPeriodDoc(pIdx) {
   const blob = await Packer.toBlob(doc);
   const filename = `เอกสารงวดที่-${pIdx+1}-${state.settings.schoolName}-${state.settings.year}.docx`;
   saveAs(blob, filename);
-  const up = await uploadWordToCloud(blob, filename, 'เอกสารงวด');
-  if (up) toast(`งวดที่ ${toThaiDigits(pIdx+1)} อัปโหลดสำเร็จ`);
+  await uploadWordToCloud(blob, filename, 'เอกสารงวด');
 }
 
+// ============================================================
+// 📄 เอกสารรายการอาหาร
+// ============================================================
 async function buildFoodListChildren(items, withPhotos) {
   const s = state.settings, d = state.delivery;
   const children = [];
   const BLOCKS_PER_PAGE = 3;
   let blockCount = 0;
-
   for (const it of items) {
     if (blockCount > 0 && blockCount % BLOCKS_PER_PAGE === 0) children.push(pageBreak());
     const amount = s.studentCount * s.pricePerStudent;
@@ -1376,12 +1536,10 @@ async function buildFoodListChildren(items, withPhotos) {
     foodLines.push(...it.main.split(' + ').map(x => x.trim()).filter(Boolean));
     if (it.dessert) foodLines.push(it.dessert);
     if (it.fruit) foodLines.push(it.fruit);
-
     const beforeTitle = blockCount > 0 ? 320 : 0;
     children.push(p('ใบสรุปรายการประกอบอาหาร', { align: AlignmentType.CENTER, bold: true, size: 30, before: beforeTitle }));
     children.push(p(`แนบท้ายใบส่งมอบงานเลขที่ ${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)} ลงวันที่ ${toThaiDate(it.date)}`,
       { align: AlignmentType.CENTER, size: 26, before: 40, after: 60 }));
-
     const MARG = { top: 40, bottom: 40, left: 80, right: 80 };
     children.push(new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1402,10 +1560,8 @@ async function buildFoodListChildren(items, withPhotos) {
         ]}),
       ],
     }));
-
     children.push(new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: NONE_TABLE,
+      width: { size: 100, type: WidthType.PERCENTAGE }, borders: NONE_TABLE,
       rows: [new TableRow({ children: [
         new TableCell({ width: { size: 50, type: WidthType.PERCENTAGE }, borders: NONE_BORDERS,
           children: [
@@ -1423,10 +1579,8 @@ async function buildFoodListChildren(items, withPhotos) {
           ]}),
       ]})],
     }));
-
     blockCount++;
   }
-
   if (withPhotos) {
     const photos = state.delivery.photos || {};
     const photoItems = items.filter(it => photos[it.date]);
@@ -1434,24 +1588,20 @@ async function buildFoodListChildren(items, withPhotos) {
       const byPeriod = {};
       photoItems.forEach(it => { if (!byPeriod[it.period]) byPeriod[it.period] = []; byPeriod[it.period].push(it); });
       const periodKeys = Object.keys(byPeriod).sort((a,b) => a-b);
-
       for (const pIdxStr of periodKeys) {
         const pIdx = Number(pIdxStr);
         const list = byPeriod[pIdx].sort((a,b) => a.date.localeCompare(b.date));
         if (!list.length) continue;
         children.push(pageBreak());
-
         const dateStart = list[0].date, dateEnd = list[list.length-1].date;
         children.push(p(`ภาพประกอบการจัดจ้างบุคคลภายนอกเพื่อประกอบอาหารกลางวัน`, { align: AlignmentType.CENTER, size: 28 }));
         children.push(p(`นักเรียนชั้นอนุบาล 2 - ชั้นประถมศึกษาปีที่ 6 ${s.schoolName} งวดที่ ${toThaiDigits(pIdx+1)}`, { align: AlignmentType.CENTER, size: 28 }));
         children.push(p(`(ตั้งแต่วันที่ ${toThaiDate(dateStart)} ถึงวันที่ ${toThaiDate(dateEnd)}) ปีการศึกษา ${toThaiDigits(s.year)}`, { align: AlignmentType.CENTER, size: 28 }));
         children.push(p(`ใบสั่งจ้างเลขที่ ${toThaiDigits(d.poNumber)}/${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(d.poDate)}`, { align: AlignmentType.CENTER, size: 28, before: 60, after: 200 }));
-
         const fileIds = list.map(e => {
           const pp = photos[e.date];
           return (pp && typeof pp === 'object') ? pp.fileId : null;
         }).filter(Boolean);
-
         let photoBase64 = {};
         if (fileIds.length && APPS_SCRIPT_URL) {
           try {
@@ -1460,7 +1610,6 @@ async function buildFoodListChildren(items, withPhotos) {
             if (data.ok) photoBase64 = data.photos || {};
           } catch(e) { console.error('load photos failed:', e); }
         }
-
         const MAX_W = 280, MAX_H = 210;
         const dims = {};
         for (const entry of list) {
@@ -1497,7 +1646,6 @@ async function buildFoodListChildren(items, withPhotos) {
           rows.push(new TableRow({ children: [mkCell(left), mkCell(right)] }));
         }
         children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: NONE_TABLE, rows }));
-
         children.push(p(' ', { before: 400 }));
         const committee = state.committee || [];
         if (committee.length >= 3) {
@@ -1517,7 +1665,6 @@ async function buildFoodListChildren(items, withPhotos) {
       }
     }
   }
-
   return children;
 }
 
@@ -1584,7 +1731,7 @@ function buildPeriodChildren(pIdx, schedule) {
   children.push(p(d.district || 'อำเภอดอยเต่า', { align: AlignmentType.RIGHT, size: 28, after: 20 }));
   children.push(p(d.province || 'จังหวัดเชียงใหม่', { align: AlignmentType.RIGHT, size: 28, after: 160 }));
   children.push(p(`วันที่ ${toThaiDigits(new Date(dateEnd).getDate())} เดือน ${TH_MONTHS[new Date(dateEnd).getMonth()]} พ.ศ. ${toThaiDigits(new Date(dateEnd).getFullYear()+543)}`, { align: AlignmentType.RIGHT, size: 28, after: 160 }));
-  children.push(p(`ด้วย บริษัท/ห้างหุ้นส่วน/ร้าน/หน่วยงาน.....${s.contractorName}..... ได้ส่งมอบงานจ้างประกอบอาหารประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)} ตาม ☐ ใบสั่งซื้อ เลขที่ ...................... ☐ ใบสั่งจ้าง เลขที่ ${toThaiDigits(d.poNumber)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(d.poDate)} ไว้ให้แก่ ${s.schoolName}`, { size: 28, after: 100 }));
+  children.push(p(`ด้วย บริษัท/ห้างหุ้นส่วน/ร้าน/หน่วยงาน.....${s.contractorName}..... ได้ส่งมอบงานจ้างประกอบอาหาร ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)} ตาม ☐ ใบสั่งซื้อ เลขที่ ...................... ☐ ใบสั่งจ้าง เลขที่ ${toThaiDigits(d.poNumber)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(d.poDate)} ไว้ให้แก่ ${s.schoolName}`, { size: 28, after: 100 }));
   children.push(p(`เพื่อให้ ☐ ผู้ตรวจรับพัสดุ ☐ คณะกรรมการตรวจรับพัสดุ ทำการตรวจรับแล้ว ปรากฏผล ดังนี้`, { size: 28, after: 100 }));
   children.push(p(`1. ครบกำหนด วันที่ ${toThaiDate(dateEnd)}`, { size: 28, indent: { firstLine: INDENT }, after: 40 }));
   children.push(p(`2. ส่งมอบ วันที่ ${toThaiDate(dateEnd)}`, { size: 28, indent: { firstLine: INDENT }, after: 40 }));
@@ -1592,12 +1739,12 @@ function buildPeriodChildren(pIdx, schedule) {
   children.push(p(`4. ได้ตรวจรับและให้ถือว่าพัสดุ  ☐ ถูกต้อง จำนวน.....${toThaiDigits(items.length)}...รายการ`, { size: 28, indent: { firstLine: INDENT }, after: 40 }));
   children.push(p(`         ☐ ไม่ถูกต้อง จำนวน - รายการ`, { size: 28, indent: { firstLine: INDENT }, after: 40 }));
   children.push(p(`         ตั้งแต่วันที่ ${toThaiDateShort(dateStart)} ถึงวันที่ ${toThaiDateShort(dateEnd)} เส้นกำหนด.....-${NBSP}${NBSP}${NBSP}วัน`, { size: 28, indent: { firstLine: INDENT }, after: 100 }));
-  children.push(p(`เห็นสมควรให้จ่ายเงินค่าจ้างประกอบอาหารประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)} ให้แก่ บริษัท/ห้างหุ้นส่วน/ร้าน.....${s.contractorName}..... เป็นจำนวนเงินทั้งสิ้น.....${thMoney(amount)}.....บาท (${formatMoneyThai(amount)})`, { size: 28, after: 100 }));
+  children.push(p(`เห็นสมควรให้จ่ายเงินค่าจ้างประกอบอาหาร ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)} ให้แก่ บริษัท/ห้างหุ้นส่วน/ร้าน.....${s.contractorName}..... เป็นจำนวนเงินทั้งสิ้น.....${thMoney(amount)}.....บาท (${formatMoneyThai(amount)})`, { size: 28, after: 100 }));
   children.push(p(`5. ได้เชิญผู้ชำนาญการหรือผู้ทรงคุณวุฒิมาปรึกษาด้วย คือ.........${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}-${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}${NBSP}.........`, { size: 28, indent: { firstLine: INDENT }, after: 100 }));
   children.push(p(`จึงรายงานต่อผู้อำนวยการ${s.schoolName} เพื่อโปรดทราบผลการตรวจรับ ตามนัยข้อ 175 แห่งระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ.2560`, { size: 28, after: 160 }));
   const sigTable = new Table({
     width: { size: 100, type: WidthType.PERCENTAGE }, borders: NONE_TABLE,
-    rows: state.committee.map((c, idx) => new TableRow({ children: [
+    rows: state.committee.map((c) => new TableRow({ children: [
       new TableCell({ width: { size: 100, type: WidthType.PERCENTAGE }, borders: NONE_BORDERS,
         children: [
           new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { line: 220, before: 60 }, children: [new TextRun({ text: `ลงชื่อ....................................................${c.role || 'กรรมการ'}`, font: FONT, size: 28, noProof: true })] }),
@@ -1720,9 +1867,9 @@ function buildPeriodChildren(pIdx, schedule) {
   return children;
 }
 
-async function generateFoodList() { await downloadFoodList(); }
-async function generateAllPeriods() { await downloadPeriod(); }
-
+// ============================================================
+// 📁 FILES
+// ============================================================
 async function refreshFiles() {
   if (!APPS_SCRIPT_URL) { document.getElementById('fileList').innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">ยังไม่ได้ตั้งค่า</p>'; return; }
   document.getElementById('fileList').innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">กำลังโหลด...</p>';
@@ -1754,11 +1901,14 @@ async function deleteCloudFile(id) {
   try {
     const res = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteFile', id }), headers: { 'Content-Type': 'text/plain;charset=utf-8' }, redirect: 'follow' });
     const data = await res.json();
-    if (data.ok) { toast('ลบแล้ว'); refreshFiles(); } else toast('ลบไม่สำเร็จ', true);
-  } catch(e) { toast('ผิดพลาด: ' + e.message, true); }
+    if (data.ok) { toast('ลบแล้ว'); refreshFiles(); } else toast('ลบไม่สำเร็จ', 'error');
+  } catch(e) { toast('ผิดพลาด: ' + e.message, 'error'); }
 }
 async function fixThaiTypography(blob) { return blob; }
 
+// ============================================================
+// 📄 DOCX UTILS
+// ============================================================
 const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
   WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign } = docx;
 
@@ -1891,6 +2041,9 @@ function buildPeriodSummary(schedule) {
   ]})];
 }
 
+// ============================================================
+// 📄 12 DOCUMENTS
+// ============================================================
 function docTOR_Assignment() {
   const s = state.settings; const total = s.studentCount * s.pricePerStudent * s.totalDays;
   return [
@@ -2098,7 +2251,7 @@ function previewDoc(id) {
 }
 async function exportCurrentDocx() {
   const d = DOCS.find(x => x.id === state.currentDoc); if (!d) return;
-  toast('กำลังสร้าง...');
+  toast('กำลังสร้าง...', 'info');
   try {
     const doc = new Document({
       creator: 'ระบบจัดจ้างอาหารกลางวัน', title: d.name, revision: 1,
@@ -2109,14 +2262,13 @@ async function exportCurrentDocx() {
     const filename = `${d.name.replace(/^\d+\.\s*/, '')}.docx`;
     saveAs(blob, filename);
     toast('ดาวน์โหลดแล้ว');
-    const up = await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
-    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); setTimeout(refreshFiles, 1500); }
-    await syncToCloud(true);
-  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
+    await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
+    setTimeout(refreshFiles, 1500);
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, 'error'); }
 }
 async function exportAllDocs() {
   if (!state.schedule.length && !confirm('ยังไม่มีตารางอาหาร?')) return;
-  toast('กำลังสร้าง 12 ฉบับ...');
+  toast('กำลังสร้าง 12 ฉบับ...', 'info');
   try {
     const sections = DOCS.map((d) => ({
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1701, right: 1417 } } },
@@ -2131,10 +2283,9 @@ async function exportAllDocs() {
     const filename = `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`;
     saveAs(blob, filename);
     toast('ดาวน์โหลดแล้ว');
-    const up = await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
-    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); setTimeout(refreshFiles, 1500); }
-    await syncToCloud(true);
-  } catch (e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
+    await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
+    setTimeout(refreshFiles, 1500);
+  } catch (e) { console.error(e); toast('ผิดพลาด: ' + e.message, 'error'); }
 }
 function hr(after=120) {
   return new Paragraph({ spacing:{ line: LINE, after }, border:{ bottom:{ color:'000000', space:1, style:BorderStyle.SINGLE, size:6 } },
@@ -2146,23 +2297,58 @@ function refreshAllUI() {
   renderPeriods(); renderSchedule(); renderDelivery(); renderDocuments(); renderGarudaPreview();
 }
 
+// ============================================================
+// 🚀 INIT
+// ============================================================
 window.addEventListener('DOMContentLoaded', async () => {
-  buildSettingsForm(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus();
+  buildSettingsForm();
+  updateDashboard();
+  fillSettingsForm();
+  renderCommittee();
+  renderMenus();
+  
   await loadGarudaFromURL();
-  renderGarudaPreview(); renderDocuments(); renderDelivery();
-  if (Object.keys(state.periodAssignments).length === 0) autoAssignPeriods();
-  if (APPS_SCRIPT_URL) {
-    try {
-      const res = await fetch(APPS_SCRIPT_URL + '?action=ping');
-      const data = await res.json();
-      if (data.ok) {
-        updateConnUI('ok');
-        await loadPhotosFromCloud();
-      }
-    } catch(e) { updateConnUI('off'); }
-    refreshFiles();
+  renderGarudaPreview();
+  renderDocuments();
+  renderDelivery();
+  
+  if (Object.keys(state.periodAssignments).length === 0) {
+    // First time — auto assign
+    const days = buildWorkingDays();
+    const counts = [10, 8, 10, 8, 12];
+    let idx = 0;
+    counts.forEach((cnt, i) => { for (let k = 0; k < cnt && idx < days.length; k++) { state.periodAssignments[days[idx]] = i; idx++; } });
+    saveStateLocal(true);
+  }
+  
+  // Initial sync + start polling
+  await initialSync();
+  startPolling();
+  refreshFiles();
+  
+  console.log('✅ ระบบพร้อมใช้งาน — Client ID:', CLIENT_ID);
+});
+
+// ✅ หยุด poll เมื่อ tab hidden
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    // กลับมาเปิด tab → pull ทันที
+    pullFromCloud(false);
+    startPolling();
   }
 });
+
+// ✅ ก่อนปิดหน้า → push ครั้งสุดท้าย
+window.addEventListener('beforeunload', (e) => {
+  if (syncState.pendingSave && APPS_SCRIPT_URL) {
+    // ใช้ sendBeacon สำหรับ push ครั้งสุดท้าย
+    const payload = JSON.stringify({ action: 'save', data: stateForCloud(), clientId: CLIENT_ID });
+    navigator.sendBeacon(APPS_SCRIPT_URL, new Blob([payload], { type: 'text/plain' }));
+  }
+});
+
 window.addEventListener('resize', () => { if (window.innerWidth >= 1024) closeDrawer(); });
 </script>
 </body>
