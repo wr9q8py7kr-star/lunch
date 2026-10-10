@@ -12,12 +12,11 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
   * { font-family: 'Sarabun', sans-serif; -webkit-tap-highlight-color: transparent; }
-  html, body { overscroll-behavior-y: contain; }
   body { background: #f5f7fb; }
   button, select, input, a { touch-action: manipulation; }
   .page { display: none; } .page.active { display: block; }
   .nav-item.active { background: #1e40af; color: white; }
-  .doc-preview { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem 2.5rem; max-width: 900px; margin: 0 auto; font-size: 15px; line-height: 1.55; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .doc-preview { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 2rem 2.5rem; max-width: 900px; margin: 0 auto; font-size: 15px; line-height: 1.55; overflow-x: auto; }
   .doc-preview table { border-collapse: collapse; }
   .doc-preview img { max-width: 100%; height: auto; }
   .toast { position: fixed; bottom: 1rem; right: 1rem; left: 1rem; background: #16a34a; color: white; padding: 0.75rem 1.25rem; border-radius: 8px; opacity: 0; transition: opacity .3s; z-index: 9999; text-align: center; pointer-events: none; }
@@ -32,33 +31,26 @@
   .date-chip.in-period-3 { background: #fee2e2; border-color: #ef4444; color: #991b1b; }
   .date-chip.in-period-4 { background: #ede9fe; border-color: #8b5cf6; color: #5b21b6; }
   .date-chip.not-in-period { opacity: 0.5; }
-  .cat-main { background: #dbeafe; color: #1e40af; }
-  .cat-soup { background: #fef3c7; color: #92400e; }
-  .cat-noodle { background: #fee2e2; color: #991b1b; }
-  .cat-chili { background: #fce7f3; color: #9d174d; }
-
-  /* Input touch-friendly */
-  input[type="text"], input[type="number"], input[type="date"], select, textarea {
-    min-height: 40px;
-  }
-
+  .cat-ผัด { background: #dbeafe; color: #1e40af; }
+  .cat-ต้ม { background: #fef3c7; color: #92400e; }
+  .cat-เส้น { background: #fee2e2; color: #991b1b; }
+  .cat-น้ำพริก { background: #fce7f3; color: #9d174d; }
+  .cat-อื่นๆ { background: #e9d5ff; color: #6b21a8; }
+  .cat-ของหวาน { background: #f3e8ff; color: #7c3aed; }
+  .cat-ผลไม้ { background: #fef9c3; color: #a16207; }
+  input[type="text"], input[type="number"], input[type="date"], select, textarea { min-height: 40px; }
   @media (max-width: 1023px) {
-    .doc-preview {
-      padding: 0.75rem 0.5rem;
-      font-size: 12px;
-      line-height: 1.5;
-    }
+    .doc-preview { padding: 0.75rem 0.5rem; font-size: 12px; }
     .doc-preview table { font-size: 11px !important; }
-    .doc-preview h2 { font-size: 15px !important; }
-    .doc-preview h3 { font-size: 14px !important; }
     .doc-preview img { max-height: 80px !important; width: auto !important; }
   }
   @media print { .no-print { display: none !important; } }
-
-  /* Custom scrollbar for horizontal tables */
   .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .scroll-x::-webkit-scrollbar { height: 6px; }
-  .scroll-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .conn-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .conn-ok { background: #16a34a; box-shadow: 0 0 0 3px rgba(22,163,74,.2); }
+  .conn-off { background: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,.2); }
+  .conn-sync { background: #f59e0b; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
 </style>
 </head>
 <body>
@@ -66,21 +58,19 @@
 <!-- ============ MOBILE TOP BAR ============ -->
 <header class="lg:hidden fixed top-0 inset-x-0 z-30 h-14 bg-blue-900 text-white flex items-center justify-between px-2 shadow-md no-print" style="padding-top: env(safe-area-inset-top);">
   <button onclick="openDrawer()" aria-label="เมนู" class="p-2 rounded-lg hover:bg-blue-800 active:bg-blue-700">
-    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
   </button>
   <div class="flex-1 text-center px-2 overflow-hidden">
     <p class="text-[10px] opacity-75 leading-tight">ระบบจัดจ้างอาหารกลางวัน</p>
     <p class="text-sm font-semibold leading-tight truncate" id="mobileTitle">แดชบอร์ด</p>
   </div>
-  <div class="w-10"></div>
+  <div class="w-10 flex justify-center"><span id="connDotMobile" class="conn-dot conn-off"></span></div>
 </header>
 
 <!-- ============ OVERLAY ============ -->
 <div id="drawerOverlay" onclick="closeDrawer()" class="lg:hidden fixed inset-0 bg-black/50 z-40 hidden"></div>
 
-<!-- ============ SIDEBAR / DRAWER ============ -->
+<!-- ============ SIDEBAR ============ -->
 <aside id="sidebar" class="fixed top-0 bottom-0 left-0 z-50 w-72 lg:w-64 bg-white border-r border-slate-200 flex flex-col transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-out">
   <div class="p-4 border-b border-slate-200 flex items-center justify-between">
     <div>
@@ -88,9 +78,7 @@
       <p class="text-xs text-slate-500 mt-1">โรงเรียนบ้านถิ่นสำราญ</p>
     </div>
     <button onclick="closeDrawer()" class="lg:hidden p-2 text-slate-400 hover:bg-slate-100 rounded-lg">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
     </button>
   </div>
   <nav class="p-2 space-y-1 text-sm flex-1 overflow-y-auto">
@@ -100,16 +88,17 @@
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="menus">🍽️ คลังเมนู</button>
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="periods">📆 ตั้งค่างวด</button>
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="schedule">📅 ตารางอาหาร</button>
+    <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="delivery">📋 ส่งมอบงาน</button>
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="documents">📄 เอกสารจัดจ้าง</button>
+    <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="files">📁 ไฟล์ของฉัน</button>
     <button class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-slate-100" data-page="help">❓ ช่วยเหลือ</button>
   </nav>
-  <div class="p-3 text-xs text-slate-400 border-t border-slate-200">
-    <p>บันทึกอัตโนมัติ</p>
+  <div class="p-3 text-xs text-slate-400 border-t border-slate-200 space-y-1">
+    <div class="flex items-center gap-2"><span id="connDot" class="conn-dot conn-off"></span><span id="connText">ยังไม่เชื่อมต่อ</span></div>
     <p class="mt-1" id="saveStatus">✓ พร้อมใช้งาน</p>
   </div>
 </aside>
 
-<!-- ============ MAIN ============ -->
 <main class="lg:pl-64 min-h-screen pt-14 lg:pt-0">
   <div class="max-w-6xl mx-auto p-3 sm:p-4 lg:p-6">
 
@@ -128,9 +117,8 @@
             <button onclick="goPage('periods')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">📆 ตั้งค่างวด</button>
             <button onclick="shuffleAll()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">🎲 สุ่มตารางอาหาร</button>
             <button onclick="exportAllDocs()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium">📦 ดาวน์โหลดเอกสารรวม 12 ฉบับ</button>
+            <button onclick="syncToCloud()" class="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-lg font-medium">☁️ บันทึกขึ้น Cloud</button>
             <button onclick="exportBackup()" class="w-full bg-slate-100 hover:bg-slate-200 py-3 rounded-lg">💾 สำรองข้อมูล JSON</button>
-            <button onclick="document.getElementById('importFile').click()" class="w-full bg-slate-100 hover:bg-slate-200 py-3 rounded-lg">📂 โหลดข้อมูล JSON</button>
-            <input type="file" id="importFile" accept=".json" class="hidden" onchange="importBackup(event)" />
           </div>
         </div>
         <div class="bg-white rounded-xl p-4 sm:p-5 border border-slate-200"><h3 class="font-semibold mb-3">ข้อมูลโครงการ</h3>
@@ -139,7 +127,7 @@
             <div class="flex justify-between gap-2"><dt class="text-slate-500">ปีการศึกษา</dt><dd id="dashYear">-</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-slate-500">ช่วงเวลา</dt><dd id="dashRange" class="text-right">-</dd></div>
             <div class="flex justify-between gap-2"><dt class="text-slate-500">เมนูในคลัง</dt><dd id="dashMenuCount">-</dd></div>
-            <div class="flex justify-between gap-2"><dt class="text-slate-500">ตราครุฑ</dt><dd id="dashGaruda">-</dd></div>
+            <div class="flex justify-between gap-2"><dt class="text-slate-500">ไฟล์ใน Drive</dt><dd id="dashFileCount">-</dd></div>
           </dl>
         </div>
       </div>
@@ -151,16 +139,26 @@
       <form id="settingsForm" class="space-y-5">
         <div id="settingsGrid"></div>
         <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200">
+          <h3 class="font-bold text-lg mb-2 text-slate-700">🔗 Cloud Sync (Google Sheet)</h3>
+          <p class="text-xs text-slate-500 mb-3">วาง Web App URL จาก Apps Script (ดูวิธีตั้งค่าใน Help)</p>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="cloudUrlInput" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 border border-slate-300 rounded-lg px-3 py-2.5 text-sm" />
+            <button type="button" onclick="saveCloudUrl()" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg">บันทึก URL</button>
+            <button type="button" onclick="testCloudConnection()" class="px-4 py-2.5 bg-slate-100 rounded-lg">ทดสอบ</button>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" onclick="syncFromCloud(true)" class="px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm">⬇️ ดึงจาก Cloud (ล้างค่าท้องถิ่น)</button>
+            <button type="button" onclick="syncToCloud()" class="px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm">⬆️ ส่งขึ้น Cloud</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200">
           <h3 class="font-bold text-lg mb-2 text-slate-700">🦅 ตราครุฑ</h3>
-          <p class="text-xs text-slate-500 mb-3">
-            ระบบโหลดตราครุฑอัตโนมัติจากไฟล์ <code class="bg-slate-100 px-1.5 py-0.5 rounded">garuda.png</code>
-            ที่วางไว้โฟลเดอร์เดียวกับไฟล์ HTML
-          </p>
+          <p class="text-xs text-slate-500 mb-3">ระบบโหลดอัตโนมัติจากไฟล์ <code class="bg-slate-100 px-1.5 py-0.5 rounded">garuda.png</code></p>
           <div id="garudaPreview"></div>
         </div>
         <div class="flex justify-end gap-2 pt-2 sticky bottom-3 bg-white/95 backdrop-blur rounded-lg p-3 border border-slate-200 shadow z-10">
-          <button type="button" onclick="resetSettings()" class="px-4 py-2.5 bg-slate-100 rounded-lg hover:bg-slate-200">คืนค่าเริ่มต้น</button>
-          <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">💾 บันทึก</button>
+          <button type="button" onclick="resetSettings()" class="px-4 py-2.5 bg-slate-100 rounded-lg">คืนค่าเริ่มต้น</button>
+          <button type="submit" class="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium">💾 บันทึก</button>
         </div>
       </form>
     </section>
@@ -172,11 +170,7 @@
         <div class="scroll-x">
           <table class="w-full text-sm min-w-[640px]">
             <thead><tr class="text-left border-b">
-              <th class="py-2 pr-2">ชื่อ–สกุล</th>
-              <th class="py-2 pr-2">ตำแหน่ง</th>
-              <th class="py-2 pr-2">บทบาท</th>
-              <th class="py-2 pr-2">วันรับผิดชอบ</th>
-              <th class="w-10"></th>
+              <th class="py-2 pr-2">ชื่อ–สกุล</th><th class="py-2 pr-2">ตำแหน่ง</th><th class="py-2 pr-2">บทบาท</th><th class="py-2 pr-2">วันรับผิดชอบ</th><th class="w-10"></th>
             </tr></thead>
             <tbody id="committeeBody"></tbody>
           </table>
@@ -188,12 +182,15 @@
     <!-- ===== Menus ===== -->
     <section id="page-menus" class="page">
       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">คลังเมนูอาหาร</h2>
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs text-blue-800">
+        💡 <b>แก้ไขหมวดของเมนูได้ทันที</b> — ระบบจะจำไว้ และใช้ในการสุ่มครั้งต่อไป
+      </div>
       <div class="bg-white rounded-xl p-3 sm:p-6 border border-slate-200">
         <div class="flex flex-col sm:flex-row gap-2 mb-4">
           <input id="menuSearch" placeholder="ค้นหาเมนู..." class="border rounded-lg px-3 py-2.5 flex-1" oninput="renderMenus()" />
           <select id="menuFilter" class="border rounded-lg px-3 py-2.5" onchange="renderMenus()">
             <option value="">ทุกประเภท</option>
-            <option>เมนูผัด</option><option>เมนูต้ม</option><option>เมนูเส้น</option><option>น้ำพริก</option><option>ผัก</option><option>ของหวาน</option><option>ผลไม้</option>
+            <option>ผัด</option><option>ต้ม</option><option>เส้น</option><option>น้ำพริก</option><option>ของหวาน</option><option>ผลไม้</option>
           </select>
           <button onclick="addMenu()" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg whitespace-nowrap">+ เพิ่มเมนู</button>
         </div>
@@ -211,9 +208,7 @@
         </div>
       </div>
       <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mb-4">
-        <div class="scroll-x border-b border-slate-200">
-          <div id="periodTabs" class="flex whitespace-nowrap"></div>
-        </div>
+        <div class="scroll-x border-b border-slate-200"><div id="periodTabs" class="flex whitespace-nowrap"></div></div>
         <div class="p-3 bg-blue-50 border-b border-blue-200"><p class="text-sm"><b>กำลังเลือก:</b> <span id="activePeriodLabel" class="text-blue-700 font-bold">งวดที่ 1</span></p></div>
         <div id="periodsGrid" class="p-3 sm:p-6 flex flex-wrap gap-2"></div>
       </div>
@@ -230,9 +225,98 @@
         </div>
       </div>
       <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 text-xs text-blue-800 leading-relaxed">
-        <b>รูปแบบ:</b> สัปดาห์ละ 7 วัน — เส้น 1 · ผัด 2 · ต้ม 2 · น้ำพริกสลับสัปดาห์ (แทนด้วยลาบ 1 วัน) · ผลไม้ 3 · ของหวาน 2 · ไอศกรีมวันศุกร์ (สลับสัปดาห์)
+        <b>รูปแบบ:</b> จ.=ผัด+ผลไม้ · อ.=ต้ม+ของหวาน · พ.=น้ำพริก(สลับ)/ลาบ+ผลไม้ · พฤ.=ต้ม+ของหวาน · ศ.=เส้น+ไอศกรีม(สลับ)/ของหวาน
       </div>
       <div id="scheduleWrap" class="space-y-4 sm:space-y-6"></div>
+    </section>
+
+    <!-- ===== Delivery (NEW PAGE) ===== -->
+    <section id="page-delivery" class="page">
+      <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">📋 ส่งมอบงาน</h2>
+      <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 text-xs text-green-800">
+        💡 กรอกรายละเอียดเอกสารให้ครบ → กด "สร้างไฟล์ Word" → ระบบจะอัปโหลดขึ้น Drive และแสดงในหน้า "📁 ไฟล์ของฉัน"
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">📄 ข้อมูลใบส่งมอบงาน</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs">เลขที่ใบส่งมอบงาน
+                <input id="dv_foodNoteNumber" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+              <label class="text-xs">ปี พ.ศ.
+                <input id="dv_foodNoteYear" type="number" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">📋 ข้อมูลใบสั่งจ้าง</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs">เลขที่ใบสั่งจ้าง
+                <input id="dv_poNumber" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+              <label class="text-xs">วันที่ออกใบสั่งจ้าง
+                <input id="dv_poDate" type="date" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">💰 ภาษี</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs">หัก ณ ที่จ่าย (%)
+                <input id="dv_taxRate" type="number" step="0.01" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+              <label class="text-xs">เลขผู้เสียภาษี
+                <input id="dv_taxId" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">🧾 ใบสำคัญรับเงิน</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs">เลขที่ใบสำคัญ
+                <input id="dv_receiptNumber" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+              <label class="text-xs">ชื่อผู้รับเงิน
+                <input id="dv_receiverName" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+            </div>
+            <label class="text-xs block mt-3">ที่อยู่ผู้รับเงิน
+              <input id="dv_receiverAddress" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+            </label>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">✍️ ผู้ส่ง/ผู้รับ</h3>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="text-xs">ชื่อผู้ส่ง
+                <input id="dv_senderName" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+              <label class="text-xs">ชื่อผู้รับ
+                <input id="dv_receiverDisplay" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">📅 วันที่ส่งมอบแต่ละงวด</h3>
+            <div id="dv_periodDates" class="space-y-2"></div>
+          </div>
+          <div class="bg-white rounded-xl p-4 border border-slate-200">
+            <h3 class="font-semibold mb-3 text-slate-800">🖨️ สร้างไฟล์ Word</h3>
+            <div class="space-y-2">
+              <button onclick="generateFoodList()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-medium">📋 สร้างไฟล์รายการอาหาร</button>
+              <button onclick="generateAllPeriods()" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium">📦 สร้างไฟล์เอกสารทุกงวด</button>
+              <label class="text-xs block">หรือเลือกงวด:
+                <select id="dv_periodSelect" class="mt-1 w-full border rounded px-2 py-2 text-sm"></select>
+              </label>
+              <button onclick="generateOnePeriod()" class="w-full px-4 py-3 bg-emerald-500 text-white rounded-lg font-medium">📤 สร้างไฟล์งวดที่เลือก</button>
+            </div>
+            <div id="dv_progress" class="mt-3 text-xs text-slate-500"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ===== Documents ===== -->
@@ -244,51 +328,6 @@
           <button onclick="window.print()" class="px-4 py-2.5 bg-slate-100 rounded-lg text-sm">🖨️</button>
         </div>
       </div>
-
-      <!-- Extra exports -->
-      <div class="bg-white rounded-xl p-3 sm:p-4 border border-slate-200 mb-4 no-print">
-        <h3 class="font-semibold mb-3 text-slate-800 text-sm sm:text-base">📤 ส่งออกเอกสารเพิ่มเติม</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-          <div class="border border-blue-200 bg-blue-50 rounded-lg p-3 sm:p-4">
-            <h4 class="font-medium mb-1 text-blue-800 text-sm">📋 รายการอาหาร (รายวัน)</h4>
-            <p class="text-xs text-slate-600 mb-3">สรุปอาหารรายวัน (<span id="foodListCount">0</span> วัน)</p>
-            <div class="grid grid-cols-2 gap-2 mb-3">
-              <label class="text-xs">เลขที่ใบส่งมอบงาน
-                <input id="foodNoteNum" type="text" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
-              </label>
-              <label class="text-xs">ปี พ.ศ.
-                <input id="foodNoteYear" type="number" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
-              </label>
-            </div>
-            <button onclick="exportFoodListDocx()" class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">⬇ ดาวน์โหลด Word</button>
-          </div>
-          <div class="border border-green-200 bg-green-50 rounded-lg p-3 sm:p-4">
-            <h4 class="font-medium mb-1 text-green-800 text-sm">📦 เอกสารงวด (5 ฉบับรวม)</h4>
-            <p class="text-xs text-slate-600 mb-3">ใบส่งงาน + ใบตรวจรับ + บันทึก + รายงาน + ใบสำคัญรับเงิน</p>
-            <div class="grid grid-cols-2 gap-2 mb-3">
-              <label class="text-xs">เลือกงวด
-                <select id="periodExportSelect" class="mt-1 w-full border rounded px-2 py-2 text-sm"></select>
-              </label>
-              <label class="text-xs">หัก ณ ที่จ่าย (%)
-                <input id="taxRateInput" type="number" step="0.01" class="mt-1 w-full border rounded px-2 py-2 text-sm" />
-              </label>
-            </div>
-            <button onclick="exportPeriodDocx()" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">⬇ ดาวน์โหลด Word</button>
-          </div>
-        </div>
-
-        <div class="mt-4 border-t border-slate-200 pt-4">
-          <button onclick="toggleMenuEditor()" class="w-full text-left flex items-center justify-between hover:bg-slate-50 rounded-lg p-2 -mx-2">
-            <h3 class="font-semibold text-slate-800 text-sm sm:text-base">🔧 แก้ไขเมนูอาหารก่อนส่งออก</h3>
-            <span id="menuEditorChevron" class="text-slate-400 text-xl">▶</span>
-          </button>
-          <div id="menuEditorBody" class="hidden mt-3">
-            <p class="text-xs text-slate-500 mb-3">💡 แก้ไขเมนูรายวันได้ตามที่แม่ครัวจัดจริง บันทึกอัตโนมัติ — มีผลกับทั้งไฟล์ "รายการอาหาร" และ "เอกสารงวด"</p>
-            <div id="menuEditorTable" class="max-h-[60vh] overflow-y-auto border border-slate-200 rounded-lg"></div>
-          </div>
-        </div>
-      </div>
-
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div id="docList" class="lg:col-span-1 space-y-2 no-print max-h-[60vh] overflow-y-auto"></div>
         <div class="lg:col-span-2">
@@ -297,7 +336,7 @@
               <h3 class="font-semibold text-sm sm:text-base" id="previewTitle">เลือกเอกสาร</h3>
               <div class="flex gap-2">
                 <button onclick="exportCurrentDocx()" class="px-3 py-2 text-xs sm:text-sm bg-blue-600 text-white rounded-lg">⬇ Word</button>
-                <button onclick="window.print()" class="px-3 py-2 text-xs sm:text-sm bg-slate-100 rounded-lg">🖨️ พิมพ์</button>
+                <button onclick="window.print()" class="px-3 py-2 text-xs sm:text-sm bg-slate-100 rounded-lg">🖨️</button>
               </div>
             </div>
             <div id="docPreview" class="doc-preview"></div>
@@ -306,25 +345,53 @@
       </div>
     </section>
 
+    <!-- ===== Files (NEW PAGE) ===== -->
+    <section id="page-files" class="page">
+      <div class="flex items-center justify-between mb-4 sm:mb-6">
+        <h2 class="text-xl sm:text-2xl font-bold text-slate-800">📁 ไฟล์ของฉัน</h2>
+        <button onclick="refreshFiles()" class="px-4 py-2.5 bg-slate-100 rounded-lg text-sm">🔄 รีเฟรช</button>
+      </div>
+      <div class="bg-white rounded-xl p-3 sm:p-4 border border-slate-200">
+        <div id="fileList" class="space-y-2">
+          <p class="text-slate-400 text-center py-6 text-sm">กำลังโหลด...</p>
+        </div>
+      </div>
+    </section>
+
     <!-- ===== Help ===== -->
     <section id="page-help" class="page">
       <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4 sm:mb-6">ช่วยเหลือ</h2>
-      <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 text-sm space-y-3">
-        <ol class="list-decimal list-inside space-y-2 text-slate-700">
-          <li>ไปที่ <b>⚙️ ตั้งค่าโครงการ</b> — กรอกข้อมูลให้ครบ → กดบันทึก</li>
-          <li>ไปที่ <b>👥 คณะกรรมการ</b> — เพิ่ม/แก้ไขรายชื่อ</li>
-          <li>ไปที่ <b>📆 ตั้งค่างวด</b> — เลือกงวด → แตะวันที่</li>
-          <li>ไปที่ <b>📅 ตารางอาหาร</b> — กด 🎲 สุ่มใหม่</li>
-          <li>ไปที่ <b>📄 เอกสารจัดจ้าง</b> — ดาวน์โหลด Word</li>
-          <li><b>แก้ไขเมนู:</b> ในหน้าเอกสาร คลิก "🔧 แก้ไขเมนูอาหารก่อนส่งออก"</li>
-        </ol>
-        <div class="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 mt-3">
-          <p class="font-semibold mb-1">💡 การใช้งานบนมือถือ</p>
-          <ul class="list-disc list-inside space-y-1">
+      <div class="space-y-4">
+        <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200">
+          <h3 class="font-bold mb-3">🔗 วิธีตั้งค่า Cloud Sync (Google Sheet)</h3>
+          <ol class="list-decimal list-inside space-y-2 text-sm text-slate-700">
+            <li>เปิด <a href="https://sheets.new" target="_blank" class="text-blue-600 underline">sheets.new</a> → สร้าง Sheet ใหม่</li>
+            <li>เมนู <b>Extensions → Apps Script</b></li>
+            <li>ลบโค้ดเดิม → วางโค้ด <code class="bg-slate-100 px-1 rounded">Code.gs</code> (ดูด้านล่าง)</li>
+            <li>กด <b>Deploy → New deployment</b></li>
+            <li>Type: <b>Web app</b> · Execute as: <b>Me</b> · Who has access: <b>Anyone</b></li>
+            <li>Deploy → Authorize → Allow</li>
+            <li>Copy <b>Web app URL</b> → วางในหน้า <b>⚙️ ตั้งค่าโครงการ</b></li>
+          </ol>
+        </div>
+        <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200">
+          <h3 class="font-bold mb-3">📱 การใช้งานบนมือถือ</h3>
+          <ul class="list-disc list-inside space-y-1 text-sm text-slate-700">
             <li>แตะปุ่ม ☰ มุมซ้ายบนเพื่อเปิดเมนู</li>
             <li>ตารางอาหารใช้การ์ด — แต่ละวันเป็น 1 การ์ด</li>
-            <li>ตารางในเอกสารเลื่อนแนวนอนได้</li>
+            <li>แก้ไขเมนูได้ 2 ทาง: หน้า 📅 ตารางอาหาร หรือหน้า 📋 ส่งมอบงาน</li>
           </ul>
+        </div>
+        <div class="bg-white rounded-xl p-4 sm:p-6 border border-slate-200">
+          <h3 class="font-bold mb-3">🎲 รูปแบบการสุ่ม</h3>
+          <table class="w-full text-xs border border-slate-200 rounded">
+            <tr class="bg-slate-100"><th class="p-2 text-left">วัน</th><th class="p-2 text-left">เมนูหลัก</th><th class="p-2 text-left">ของหวาน</th></tr>
+            <tr><td class="p-2 border-t">จ.</td><td class="p-2 border-t">ผัด</td><td class="p-2 border-t">ผลไม้</td></tr>
+            <tr><td class="p-2 border-t">อ.</td><td class="p-2 border-t">ต้ม</td><td class="p-2 border-t">ของหวาน</td></tr>
+            <tr><td class="p-2 border-t">พ.</td><td class="p-2 border-t">น้ำพริก / ลาบ (สลับสัปดาห์)</td><td class="p-2 border-t">ผลไม้</td></tr>
+            <tr><td class="p-2 border-t">พฤ.</td><td class="p-2 border-t">ต้ม</td><td class="p-2 border-t">ของหวาน</td></tr>
+            <tr><td class="p-2 border-t">ศ.</td><td class="p-2 border-t">เส้น</td><td class="p-2 border-t">ไอศกรีม / ของหวาน (สลับสัปดาห์)</td></tr>
+          </table>
         </div>
       </div>
     </section>
@@ -336,53 +403,74 @@
 
 <script>
 // ============================================================
-// ⚙️ ตั้งค่าตราครุฑ (แกะไฟล์ garuda.png ไว้โฟลเดอร์เดียวกับ HTML)
-// ถ้าต้องการใช้ URL อื่น เช่น GitHub raw ก็เปลี่ยนได้เลย
+// ⚙️ ตั้งค่า
 // ============================================================
 const GARUDA_URL = './garuda.png';
-const STORAGE_KEY = 'school-lunch-v15';
+const STORAGE_KEY = 'school-lunch-v16';
+// 🔴 สำคัญ: ใส่ Web App URL ของคุณที่นี่
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4sSOXW-NLfTjbXQWqRQSV9o4LPtFfxNIp0wdWA2PWNOwi2FTzWHfz1_8ChtnhuKGN/exec';
 let garudaBuffer = null;
+let cloudFiles = [];
+let cloudSyncing = false;
 
-const MENU_CATS = ['เมนูผัด', 'เมนูต้ม', 'เมนูเส้น', 'น้ำพริก', 'ผัก', 'ของหวาน', 'ผลไม้'];
-const CAT_COLORS = {
-  'เมนูผัด': 'bg-blue-100 text-blue-700',
-  'เมนูต้ม': 'bg-amber-100 text-amber-700',
-  'เมนูเส้น': 'bg-red-100 text-red-700',
-  'น้ำพริก': 'bg-pink-100 text-pink-700',
-  'ผัก': 'bg-green-100 text-green-700',
-  'ของหวาน': 'bg-purple-100 text-purple-700',
-  'ผลไม้': 'bg-yellow-100 text-yellow-700',
-};
+const MENU_CATS = ['ผัด', 'ต้ม', 'เส้น', 'น้ำพริก', 'ของหวาน', 'ผลไม้'];
 
+// ============================================================
+// 📋 คลังเมนูเริ่มต้น (ตาม categorization จากผู้ใช้)
+// ============================================================
 const DEFAULT_MENUS = [
-  { id: 'p01', name: 'ข้าว + ผัดกะเพรา', cat: 'เมนูผัด' }, { id: 'p02', name: 'ข้าว + ไก่ทอด', cat: 'เมนูผัด' },
-  { id: 'p03', name: 'ข้าว + หมูทอดกระเทียม', cat: 'เมนูผัด' }, { id: 'p04', name: 'ข้าว + ไข่ลูกเขย', cat: 'เมนูผัด' },
-  { id: 'p05', name: 'ข้าว + ยำไข่ดาว', cat: 'เมนูผัด' }, { id: 'p06', name: 'ข้าว + ปลาทอด', cat: 'เมนูผัด' },
-  { id: 'p07', name: 'ข้าว + ไก่ผัดเม็ดมะม่วง', cat: 'เมนูผัด' }, { id: 'p08', name: 'ข้าว + ผัดผักบุ้ง', cat: 'เมนูผัด' },
-  { id: 'p09', name: 'ข้าว + ผัดกะหล่ำปลี', cat: 'เมนูผัด' }, { id: 'p10', name: 'ข้าว + ผัดหน่อไม้', cat: 'เมนูผัด' },
-  { id: 'p11', name: 'ข้าว + ลาบอีสาน', cat: 'เมนูผัด' }, { id: 'p12', name: 'ข้าว + ผัดพริกแกง', cat: 'เมนูผัด' },
-  { id: 't01', name: 'ข้าว + ต้มจืด', cat: 'เมนูต้ม' }, { id: 't02', name: 'ข้าว + แกงเขียวหวานไก่', cat: 'เมนูต้ม' },
-  { id: 't03', name: 'ข้าว + แกงเผ็ด', cat: 'เมนูต้ม' }, { id: 't04', name: 'ข้าว + ต้มยำกุ้ง', cat: 'เมนูต้ม' },
-  { id: 't05', name: 'ข้าว + ต้มส้มไก่', cat: 'เมนูต้ม' }, { id: 't06', name: 'ข้าว + พะแนงไก่', cat: 'เมนูต้ม' },
-  { id: 't07', name: 'ข้าว + ไข่พะโล้', cat: 'เมนูต้ม' }, { id: 't08', name: 'ข้าว + ต้มจืดแตงกวา', cat: 'เมนูต้ม' },
-  { id: 't09', name: 'ข้าว + แกงกะทิฟักทอง', cat: 'เมนูต้ม' }, { id: 't10', name: 'ข้าว + ต้มข่าไก่', cat: 'เมนูต้ม' },
-  { id: 'n01', name: 'ก๋วยเตี๋ยว', cat: 'เมนูเส้น' }, { id: 'n02', name: 'ขนมจีนน้ำยา', cat: 'เมนูเส้น' },
-  { id: 'n03', name: 'ข้าวซอย', cat: 'เมนูเส้น' }, { id: 'n04', name: 'ผัดไทย', cat: 'เมนูเส้น' },
-  { id: 'n05', name: 'ราดหน้า', cat: 'เมนูเส้น' }, { id: 'n06', name: 'ผัดซีอิ๊ว', cat: 'เมนูเส้น' },
-  { id: 'n07', name: 'ก๋วยเตี๋ยวน้ำใส', cat: 'เมนูเส้น' }, { id: 'n08', name: 'บะหมี่น้ำ', cat: 'เมนูเส้น' },
+  // ผัด (13)
+  { id: 'p01', name: 'ข้าว + ไก่ทอด', cat: 'ผัด' },
+  { id: 'p02', name: 'ข้าว + ผัดกะเพรา', cat: 'ผัด' },
+  { id: 'p03', name: 'ข้าว + พะแนงไก่', cat: 'ผัด' },
+  { id: 'p04', name: 'ข้าวมันไก่', cat: 'ผัด' },
+  { id: 'p05', name: 'ข้าวผัด', cat: 'ผัด' },
+  { id: 'p06', name: 'ข้าว + ผัดกะหล่ำปลี', cat: 'ผัด' },
+  { id: 'p07', name: 'ผัดซีอิ๊ว', cat: 'ผัด' },
+  { id: 'p08', name: 'ข้าว + ผัดผักรวม', cat: 'ผัด' },
+  { id: 'p09', name: 'ข้าว + ไข่ลูกเขย', cat: 'ผัด' },
+  { id: 'p10', name: 'ข้าว + ผัดผักบุ้ง', cat: 'ผัด' },
+  { id: 'p11', name: 'ข้าว + ผัดหน่อไม้', cat: 'ผัด' },
+  { id: 'p12', name: 'ข้าว + ยำไข่ดาว', cat: 'ผัด' },
+  { id: 'p13', name: 'ข้าว + ผัดบวบใส่ไข่', cat: 'ผัด' },
+  // ต้ม (9)
+  { id: 't01', name: 'ข้าว + แกงเขียวหวานไก่', cat: 'ต้ม' },
+  { id: 't02', name: 'ข้าว + ไข่พะโล้', cat: 'ต้ม' },
+  { id: 't03', name: 'ข้าว + ต้มจืด', cat: 'ต้ม' },
+  { id: 't04', name: 'ข้าว + ต้มส้มไก่', cat: 'ต้ม' },
+  { id: 't05', name: 'ข้าว + แกงเผ็ด', cat: 'ต้ม' },
+  { id: 't06', name: 'ข้าว + ต้มจืดแตงกวา', cat: 'ต้ม' },
+  { id: 't07', name: 'ข้าว + ต้มข่าไก่', cat: 'ต้ม' },
+  { id: 't08', name: 'ข้าว + ต้มจืดไข่น้ำ', cat: 'ต้ม' },
+  { id: 't09', name: 'ข้าว + แกงกะทิฟักทองไก่', cat: 'ต้ม' },
+  // เส้น (6)
+  { id: 'n01', name: 'ขนมจีน', cat: 'เส้น' },
+  { id: 'n02', name: 'ข้าวซอย', cat: 'เส้น' },
+  { id: 'n03', name: 'ก๋วยเตี๋ยว', cat: 'เส้น' },
+  { id: 'n04', name: 'ราดหน้า', cat: 'เส้น' },
+  { id: 'n05', name: 'ผัดไทย', cat: 'เส้น' },
+  { id: 'n06', name: 'ข้าวซอยไก่', cat: 'เส้น' },
+  // น้ำพริก (2)
   { id: 'c01', name: 'ข้าว + น้ำพริกกะปิ + ไข่เจียว', cat: 'น้ำพริก' },
   { id: 'c02', name: 'ข้าว + น้ำพริกอ่อง', cat: 'น้ำพริก' },
-  { id: 'c03', name: 'ข้าว + น้ำพริกปลาทู', cat: 'น้ำพริก' },
-  { id: 'v01', name: 'ผัดผักรวม', cat: 'ผัก' }, { id: 'v02', name: 'ผัดผักบุ้งไฟแดง', cat: 'ผัก' },
-  { id: 'v03', name: 'ผัดกะหล่ำปลี', cat: 'ผัก' }, { id: 'v04', name: 'ต้มจืดแตงกวา', cat: 'ผัก' },
-  { id: 'v05', name: 'ผัดหน่อไม้', cat: 'ผัก' }, { id: 'v06', name: 'ผัดถั่วงอก', cat: 'ผัก' },
-  { id: 'd01', name: 'ของหวานไทย', cat: 'ของหวาน' }, { id: 'd02', name: 'กล้วยบวชชี', cat: 'ของหวาน' },
-  { id: 'd03', name: 'ขนมชั้น', cat: 'ของหวาน' }, { id: 'd04', name: 'วุ้นกะทิ', cat: 'ของหวาน' },
-  { id: 'd05', name: 'ขนมปังสังขยา', cat: 'ของหวาน' }, { id: 'd06', name: 'ไอศกรีม', cat: 'ของหวาน' },
-  { id: 'f01', name: 'ผลไม้ตามฤดูกาล', cat: 'ผลไม้' }, { id: 'f02', name: 'แตงโม', cat: 'ผลไม้' },
-  { id: 'f03', name: 'มะละกอ', cat: 'ผลไม้' }, { id: 'f04', name: 'กล้วย', cat: 'ผลไม้' },
-  { id: 'f05', name: 'ส้ม', cat: 'ผลไม้' }, { id: 'f06', name: 'ฝรั่ง', cat: 'ผลไม้' },
-  { id: 'f07', name: 'ชมพู่', cat: 'ผลไม้' }, { id: 'f08', name: 'สับปะรด', cat: 'ผลไม้' },
+  // ลาบ (1) - ใช้ใน slot น้ำพริกสลับสัปดาห์
+  { id: 'l01', name: 'ข้าว + ลาบอีสาน', cat: 'น้ำพริก' },
+  // ของหวาน
+  { id: 'd01', name: 'ของหวานไทย', cat: 'ของหวาน' },
+  { id: 'd02', name: 'กล้วยบวชชี', cat: 'ของหวาน' },
+  { id: 'd03', name: 'ขนมชั้น', cat: 'ของหวาน' },
+  { id: 'd04', name: 'วุ้นกะทิ', cat: 'ของหวาน' },
+  { id: 'd05', name: 'ขนมปังสังขยา', cat: 'ของหวาน' },
+  { id: 'ice01', name: 'ไอศกรีม', cat: 'ของหวาน' },
+  // ผลไม้
+  { id: 'f01', name: 'ผลไม้ตามฤดูกาล', cat: 'ผลไม้' },
+  { id: 'f02', name: 'แตงโม', cat: 'ผลไม้' },
+  { id: 'f03', name: 'มะละกอ', cat: 'ผลไม้' },
+  { id: 'f04', name: 'กล้วย', cat: 'ผลไม้' },
+  { id: 'f05', name: 'ส้ม', cat: 'ผลไม้' },
+  { id: 'f06', name: 'ฝรั่ง', cat: 'ผลไม้' },
+  { id: 'f07', name: 'ชมพู่', cat: 'ผลไม้' },
+  { id: 'f08', name: 'สับปะรด', cat: 'ผลไม้' },
 ];
 
 const DEFAULT_STATE = {
@@ -404,8 +492,17 @@ const DEFAULT_STATE = {
     issueDate: '2026-05-14',
     docNumberAssign: '190', docNumberMemo: '191', docNumberReport: '192', docNumberApproval: '193',
     docNumberOrder48: '48', docNumberOrder49: '49', docNumberPO: '69',
-    foodNoteNumber: '18', foodNoteYear: 2569, taxWithholdingRate: 1,
-    receiptNumber: 'บก.34', receiverName: 'นายมนตรี  ก้องตา',
+  },
+  delivery: {
+    foodNoteNumber: '18', foodNoteYear: 2569,
+    poNumber: '41', poDate: '2026-07-27',
+    taxRate: 1, taxId: '3501700108646',
+    receiptNumber: 'บก.34',
+    receiverName: 'นางชนม์นิภา  ทาปินตา',
+    receiverAddress: '386 ม.1 ต.ดอยเต่า อ.ดอยเต่า จ.เชียงใหม่',
+    senderName: 'นางชนม์นิภา  ทาปินตา',
+    receiverDisplay: 'นายมนตรี  ก้องตา',
+    periodEndDates: {},
   },
   committee: [
     { id: 'c1', name: 'นายมนตรี  ก้องตา', position: 'ครู คศ.3', role: 'ประธานกรรมการ', days: 'จันทร์' },
@@ -425,6 +522,7 @@ function loadState() {
     const parsed = JSON.parse(raw);
     return {
       settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) },
+      delivery: { ...DEFAULT_STATE.delivery, ...(parsed.delivery || {}) },
       committee: parsed.committee || DEFAULT_STATE.committee,
       menus: parsed.menus || DEFAULT_STATE.menus,
       schedule: parsed.schedule || [],
@@ -435,26 +533,25 @@ function loadState() {
     };
   } catch(e) { return JSON.parse(JSON.stringify(DEFAULT_STATE)); }
 }
-function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); const el = document.getElementById('saveStatus'); if (el) el.textContent = '✓ บันทึก ' + new Date().toLocaleTimeString('th-TH'); } catch(e) {} }
-function toast(m, err=false) { const el = document.getElementById('toast'); el.textContent = m; el.className = 'toast show' + (err?' error':''); setTimeout(()=>el.className='toast', 2500); }
+function saveState(silent=false) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    if (!silent) {
+      const el = document.getElementById('saveStatus');
+      if (el) el.textContent = '✓ บันทึก ' + new Date().toLocaleTimeString('th-TH');
+    }
+  } catch(e) {}
+}
+function toast(m, err=false) {
+  const el = document.getElementById('toast');
+  el.textContent = m;
+  el.className = 'toast show' + (err?' error':'');
+  setTimeout(()=>el.className='toast', 3000);
+}
 
-// ============ Drawer ============
-function openDrawer() {
-  const s = document.getElementById('sidebar');
-  const o = document.getElementById('drawerOverlay');
-  s.classList.remove('-translate-x-full');
-  s.classList.add('translate-x-0');
-  o.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-function closeDrawer() {
-  const s = document.getElementById('sidebar');
-  const o = document.getElementById('drawerOverlay');
-  s.classList.add('-translate-x-full');
-  s.classList.remove('translate-x-0');
-  o.classList.add('hidden');
-  document.body.style.overflow = '';
-}
+// ============ DRAWER ============
+function openDrawer() { document.getElementById('sidebar').classList.remove('-translate-x-full'); document.getElementById('sidebar').classList.add('translate-x-0'); document.getElementById('drawerOverlay').classList.remove('hidden'); document.body.style.overflow='hidden'; }
+function closeDrawer() { document.getElementById('sidebar').classList.add('-translate-x-full'); document.getElementById('sidebar').classList.remove('translate-x-0'); document.getElementById('drawerOverlay').classList.add('hidden'); document.body.style.overflow=''; }
 
 const TH_MONTHS_SHORT = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const TH_MONTHS = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -487,59 +584,143 @@ function formatMoneyThai(num) {
 const PAGE_TITLES = {
   dashboard: 'แดชบอร์ด', settings: 'ตั้งค่าโครงการ', committee: 'คณะกรรมการ',
   menus: 'คลังเมนู', periods: 'ตั้งค่างวด', schedule: 'ตารางอาหาร',
-  documents: 'เอกสารจัดจ้าง', help: 'ช่วยเหลือ',
+  delivery: 'ส่งมอบงาน', documents: 'เอกสารจัดจ้าง', files: 'ไฟล์ของฉัน', help: 'ช่วยเหลือ',
 };
 function goPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   const mt = document.getElementById('mobileTitle');
-  if (mt) mt.textContent = PAGE_TITLES[name] || 'ระบบจัดจ้าง';
+  if (mt) mt.textContent = PAGE_TITLES[name] || '';
   if (name === 'schedule') renderSchedule();
   if (name === 'menus') renderMenus();
   if (name === 'committee') renderCommittee();
   if (name === 'settings') { fillSettingsForm(); renderGarudaPreview(); }
-  if (name === 'documents') { renderDocuments(); renderMenuEditor(); }
+  if (name === 'documents') renderDocuments();
   if (name === 'dashboard') updateDashboard();
   if (name === 'periods') renderPeriods();
+  if (name === 'delivery') renderDelivery();
+  if (name === 'files') refreshFiles();
   closeDrawer();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 document.querySelectorAll('.nav-item').forEach(b => { b.onclick = () => goPage(b.dataset.page); });
 
-// ============ Garuda auto-load ============
+// ============ GARUDA ============
 async function loadGarudaFromURL() {
   try {
     const res = await fetch(GARUDA_URL, { cache: 'force-cache' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
-    if (!blob.type.startsWith('image/')) throw new Error('ไม่ใช่รูปภาพ');
     garudaBuffer = await blob.arrayBuffer();
     const reader = new FileReader();
-    state.garudaBase64 = await new Promise((resolve, reject) => {
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-    console.log('✅ โหลดตราครุฑสำเร็จ');
+    state.garudaBase64 = await new Promise((resolve, reject) => { reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob); });
     return true;
-  } catch (e) {
-    console.warn('⚠️ โหลดตราครุฑไม่สำเร็จ:', e.message);
-    garudaBuffer = null;
-    return false;
-  }
+  } catch (e) { garudaBuffer = null; return false; }
 }
 function renderGarudaPreview() {
   const el = document.getElementById('garudaPreview'); if (!el) return;
-  if (state.garudaBase64) {
-    el.innerHTML = `<div class="flex items-center gap-3"><img src="${state.garudaBase64}" class="h-16 sm:h-20 border rounded p-1 bg-white" /><span class="text-green-600 text-sm font-medium">✓ โหลดอัตโนมัติ</span></div>`;
-  } else if (garudaBuffer) {
-    el.innerHTML = `<span class="text-green-600 text-sm">✓ โหลดแล้ว</span>`;
-  } else {
-    el.innerHTML = `<div class="text-sm"><span class="text-orange-600">⚠️ ยังไม่พบไฟล์ garuda.png</span><p class="text-xs text-slate-500 mt-1">วางไฟล์ไว้โฟลเดอร์เดียวกับ HTML แล้วรีเฟรชหน้า</p></div>`;
-  }
+  if (state.garudaBase64) el.innerHTML = `<div class="flex items-center gap-3"><img src="${state.garudaBase64}" class="h-16 border rounded p-1 bg-white" /><span class="text-green-600 text-sm font-medium">✓ โหลดอัตโนมัติ</span></div>`;
+  else el.innerHTML = `<div class="text-sm"><span class="text-orange-600">⚠️ ยังไม่พบไฟล์ garuda.png</span><p class="text-xs text-slate-500 mt-1">วางไฟล์ไว้โฟลเดอร์เดียวกับ HTML</p></div>`;
 }
 
+// ============ CLOUD SYNC ============
+function updateConnUI(status) {
+  const dot = document.getElementById('connDot');
+  const dotM = document.getElementById('connDotMobile');
+  const txt = document.getElementById('connText');
+  [dot, dotM].forEach(el => {
+    if (!el) return;
+    el.className = 'conn-dot ' + (status === 'ok' ? 'conn-ok' : status === 'sync' ? 'conn-sync' : 'conn-off');
+  });
+  if (txt) txt.textContent = status === 'ok' ? 'เชื่อมต่อแล้ว' : status === 'sync' ? 'กำลังซิงค์...' : 'ยังไม่เชื่อมต่อ';
+}
+function saveCloudUrl() {
+  const url = document.getElementById('cloudUrlInput').value.trim();
+  APPS_SCRIPT_URL = url;
+  localStorage.setItem('cloudUrl', url);
+  toast(url ? 'บันทึก URL แล้ว' : 'ลบ URL แล้ว');
+  if (url) testCloudConnection();
+}
+async function testCloudConnection() {
+  if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า URL', true); return; }
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=ping');
+    const data = await res.json();
+    if (data.ok) { updateConnUI('ok'); toast('เชื่อมต่อสำเร็จ'); }
+    else { updateConnUI('off'); toast('ตอบกลับผิดพลาด', true); }
+  } catch(e) { updateConnUI('off'); toast('เชื่อมต่อไม่สำเร็จ: ' + e.message, true); }
+}
+async function syncToCloud() {
+  if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า Cloud URL', true); return false; }
+  updateConnUI('sync');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'save', data: state }),
+      headers: { 'Content-Type': 'text/plain' },
+      redirect: 'follow',
+    });
+    const data = await res.json();
+    if (data.ok) { updateConnUI('ok'); toast('บันทึกขึ้น Cloud สำเร็จ'); return true; }
+    updateConnUI('off'); toast('บันทึกไม่สำเร็จ: ' + (data.error || ''), true); return false;
+  } catch(e) { updateConnUI('off'); toast('ผิดพลาด: ' + e.message, true); return false; }
+}
+async function syncFromCloud(force=false) {
+  if (!APPS_SCRIPT_URL) { toast('ยังไม่ได้ตั้งค่า Cloud URL', true); return; }
+  if (force && !confirm('⚠️ จะล้างข้อมูลทั้งหมดในเครื่อง และดึงจาก Cloud แทน ดำเนินการต่อ?')) return;
+  updateConnUI('sync');
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=load');
+    const data = await res.json();
+    if (data.ok && data.data) {
+      const cloud = data.data;
+      state = {
+        settings: { ...DEFAULT_STATE.settings, ...(cloud.settings || {}) },
+        delivery: { ...DEFAULT_STATE.delivery, ...(cloud.delivery || {}) },
+        committee: cloud.committee || DEFAULT_STATE.committee,
+        menus: cloud.menus || DEFAULT_STATE.menus,
+        schedule: cloud.schedule || [],
+        periodAssignments: cloud.periodAssignments || {},
+        activePeriod: cloud.activePeriod != null ? cloud.activePeriod : 0,
+        currentDoc: cloud.currentDoc || 'assign_tor',
+        garudaBase64: state.garudaBase64,
+      };
+      saveState(true);
+      await loadGarudaFromURL();
+      refreshAllUI();
+      updateConnUI('ok');
+      toast('ดึงข้อมูลจาก Cloud สำเร็จ');
+    } else {
+      updateConnUI('off');
+      toast('Cloud ยังไม่มีข้อมูล', true);
+    }
+  } catch(e) { updateConnUI('off'); toast('ผิดพลาด: ' + e.message, true); }
+}
+async function uploadWordToCloud(blob, filename, subFolder) {
+  if (!APPS_SCRIPT_URL) return null;
+  try {
+    const buf = await blob.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'uploadFile',
+        name: filename,
+        base64,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        subFolder,
+      }),
+      headers: { 'Content-Type': 'text/plain' },
+      redirect: 'follow',
+    });
+    const data = await res.json();
+    if (data.ok) { return data.file; }
+    return null;
+  } catch(e) { console.error(e); return null; }
+}
+
+// ============ SETTINGS ============
 const SETTINGS_GROUPS = [
   { title: '🏫 ข้อมูลโรงเรียน', color: 'blue', fields: [
       ['schoolName', 'ชื่อโรงเรียน', 'text'], ['educationArea', 'สังกัด', 'text'],
@@ -569,15 +750,7 @@ const SETTINGS_GROUPS = [
       ['contractorName', 'ชื่อผู้รับจ้าง', 'text'], ['contractorId', 'เลขบัตรประชาชน', 'text'],
       ['contractorAddress', 'ที่อยู่', 'text', 'full'], ['contractorPhone', 'โทรศัพท์', 'text'],
   ]},
-  { title: '📤 ข้อมูลส่งออกเอกสาร', color: 'teal', fields: [
-      ['foodNoteNumber', 'เลขที่ใบส่งมอบงาน', 'text'],
-      ['foodNoteYear', 'ปี พ.ศ. ใบส่งมอบงาน', 'number'],
-      ['taxWithholdingRate', 'หักภาษี ณ ที่จ่าย (%)', 'number'],
-      ['receiptNumber', 'เลขที่ใบสำคัญรับเงิน', 'text'],
-      ['receiverName', 'ชื่อผู้รับ (กรรมการ)', 'text'],
-  ]},
 ];
-
 function buildSettingsForm() {
   const g = document.getElementById('settingsGrid'); if (!g) return;
   const colorMap = {
@@ -586,34 +759,39 @@ function buildSettingsForm() {
     orange: { bg: 'bg-orange-50', border: 'border-orange-200', title: 'text-orange-700' },
     green: { bg: 'bg-green-50', border: 'border-green-200', title: 'text-green-700' },
     purple: { bg: 'bg-purple-50', border: 'border-purple-200', title: 'text-purple-700' },
-    teal: { bg: 'bg-teal-50', border: 'border-teal-200', title: 'text-teal-700' },
   };
   g.className = 'space-y-4 sm:space-y-5';
   g.innerHTML = SETTINGS_GROUPS.map(group => {
     const c = colorMap[group.color] || colorMap.blue;
-    return `
-      <div class="${c.bg} ${c.border} border rounded-xl p-4 sm:p-5">
-        <h3 class="font-bold text-base sm:text-lg mb-3 sm:mb-4 ${c.title}">${group.title}</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          ${group.fields.map(([k, l, t, span]) => {
-            const colSpan = span === 'full' ? 'md:col-span-2 lg:col-span-3' : '';
-            return `<label class="block ${colSpan}">
-              <span class="text-sm font-medium text-slate-700">${l}</span>
-              <input name="${k}" type="${t}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
-            </label>`;
-          }).join('')}
-        </div>
-      </div>`;
+    return `<div class="${c.bg} ${c.border} border rounded-xl p-4 sm:p-5">
+      <h3 class="font-bold text-base sm:text-lg mb-3 sm:mb-4 ${c.title}">${group.title}</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        ${group.fields.map(([k, l, t, span]) => {
+          const colSpan = span === 'full' ? 'md:col-span-2 lg:col-span-3' : '';
+          return `<label class="block ${colSpan}">
+            <span class="text-sm font-medium text-slate-700">${l}</span>
+            <input name="${k}" type="${t}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2.5 bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+          </label>`;
+        }).join('')}
+      </div>
+    </div>`;
   }).join('');
 }
-function fillSettingsForm() { const f = document.getElementById('settingsForm'); for (const [k,v] of Object.entries(state.settings)) { const i = f.elements[k]; if (i) i.value = v; } }
+function fillSettingsForm() {
+  const f = document.getElementById('settingsForm');
+  for (const [k,v] of Object.entries(state.settings)) { const i = f.elements[k]; if (i) i.value = v; }
+  const urlInput = document.getElementById('cloudUrlInput');
+  if (urlInput) urlInput.value = APPS_SCRIPT_URL;
+}
 document.getElementById('settingsForm').onsubmit = (e) => {
-  e.preventDefault(); const f = e.target;
+  e.preventDefault();
+  const f = e.target;
   for (const [k] of Object.entries(state.settings)) { const i = f.elements[k]; if (i) state.settings[k] = i.type==='number'?Number(i.value):i.value; }
   saveState(); updateDashboard(); toast('บันทึกแล้ว');
 };
 function resetSettings() { if (!confirm('คืนค่าเริ่มต้น?')) return; state.settings = {...DEFAULT_STATE.settings}; fillSettingsForm(); saveState(); updateDashboard(); }
 
+// ============ COMMITTEE ============
 function renderCommittee() {
   const b = document.getElementById('committeeBody'); if (!b) return;
   b.innerHTML = state.committee.map((c,i) => `<tr class="border-b">
@@ -628,6 +806,7 @@ function updateCommittee(i,k,v) { state.committee[i][k]=v; saveState(); }
 function removeCommittee(i) { state.committee.splice(i,1); saveState(); renderCommittee(); }
 function addCommittee() { state.committee.push({ id:'c'+Date.now(), name:'', position:'', role:'กรรมการ', days:'' }); saveState(); renderCommittee(); }
 
+// ============ MENUS ============
 function renderMenus() {
   const q = (document.getElementById('menuSearch')?.value||'').toLowerCase();
   const f = (document.getElementById('menuFilter')?.value||'');
@@ -635,18 +814,21 @@ function renderMenus() {
   const items = state.menus.filter(m => (!q||m.name.toLowerCase().includes(q)) && (!f||m.cat===f));
   l.innerHTML = items.map(m => {
     const idx = state.menus.indexOf(m);
-    const cc = CAT_COLORS[m.cat] || 'bg-slate-100';
+    const cc = 'cat-' + (m.cat || 'อื่นๆ');
     return `<div class="border rounded-lg p-3 flex items-start gap-2"><div class="flex-1 min-w-0">
       <input class="w-full font-medium border-0 border-b py-1 text-sm" value="${m.name}" onchange="updateMenu(${idx},'name',this.value)" />
       <div class="mt-2 flex items-center gap-2 flex-wrap"><span class="badge ${cc}">${m.cat}</span>
         <select class="text-xs border rounded px-2 py-1.5" onchange="updateMenu(${idx},'cat',this.value)">
           ${MENU_CATS.map(c=>`<option ${c===m.cat?'selected':''}>${c}</option>`).join('')}
-        </select></div></div><button onclick="removeMenu(${idx})" class="text-red-400 text-sm p-2">✕</button></div>`;
+        </select></div></div>
+      <button onclick="removeMenu(${idx})" class="text-red-400 text-sm p-2">✕</button></div>`;
   }).join('') || '<p class="text-slate-400 col-span-2 text-center py-8">ไม่พบเมนู</p>';
 }
-function updateMenu(i,k,v) { state.menus[i][k]=v; saveState(); }
+function updateMenu(i,k,v) { state.menus[i][k]=v; saveState(); renderMenus(); renderSchedule(); }
 function removeMenu(i) { state.menus.splice(i,1); saveState(); renderMenus(); updateDashboard(); }
-function addMenu() { state.menus.push({ id:'m'+Date.now(), name:'เมนูใหม่', cat:'เมนูผัด' }); saveState(); renderMenus(); updateDashboard(); }
+function addMenu() { state.menus.push({ id:'m'+Date.now(), name:'เมนูใหม่', cat:'ผัด' }); saveState(); renderMenus(); updateDashboard(); }
+
+// ============ DASHBOARD ============
 function updateDashboard() {
   const el = id => document.getElementById(id);
   if (!el('statStudents')) return;
@@ -658,9 +840,10 @@ function updateDashboard() {
   el('dashYear').textContent = toThaiDigits(state.settings.year);
   el('dashRange').textContent = `${toThaiDateShort(state.settings.startDate)} – ${toThaiDateShort(state.settings.endDate)}`;
   el('dashMenuCount').textContent = toThaiDigits(state.menus.length);
-  el('dashGaruda').textContent = garudaBuffer ? '✓ โหลด' : '-';
+  el('dashFileCount').textContent = cloudFiles.length;
 }
 
+// ============ PERIODS ============
 function buildWorkingDays() {
   const out = []; let d = new Date(state.settings.startDate); const end = new Date(state.settings.endDate);
   while (d <= end && out.length < state.settings.totalDays) { if (!isWeekend(d)) out.push(isoDate(d)); d = addDays(d, 1); }
@@ -672,8 +855,7 @@ function renderPeriods() {
   const tabs = document.getElementById('periodTabs');
   tabs.innerHTML = [0,1,2,3,4].map(i => {
     const cnt = getPeriodDays(i).length;
-    const active = state.activePeriod === i ? 'active' : '';
-    return `<button class="period-tab ${active}" onclick="setActivePeriod(${i})">งวดที่ ${toThaiDigits(i+1)} <span class="opacity-75">(${toThaiDigits(cnt)})</span></button>`;
+    return `<button class="period-tab ${state.activePeriod===i?'active':''}" onclick="setActivePeriod(${i})">งวดที่ ${toThaiDigits(i+1)} <span class="opacity-75">(${toThaiDigits(cnt)})</span></button>`;
   }).join('');
   document.getElementById('activePeriodLabel').textContent = `งวดที่ ${toThaiDigits(state.activePeriod+1)}`;
   const grid = document.getElementById('periodsGrid');
@@ -687,18 +869,17 @@ function renderPeriods() {
     const label = assigned != null ? `ง${toThaiDigits(assigned+1)}` : '+';
     return `<span class="${cls}" onclick="toggleDate('${dateStr}')"><span style="font-weight:bold;font-size:11px;opacity:0.7">${label}</span>${toThaiDigits(d.getDate())} ${TH_MONTHS_SHORT[d.getMonth()]}</span>`;
   }).join('');
-  const sum = document.getElementById('periodsSummary');
   const total = Object.keys(state.periodAssignments).length;
   const ok = total === state.settings.totalDays;
   const notAssigned = days.filter(d => state.periodAssignments[d] == null).length;
-  sum.innerHTML = `
+  document.getElementById('periodsSummary').innerHTML = `
     <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
       <span class="font-semibold text-base sm:text-lg">รวม ${toThaiDigits(total)} / ${toThaiDigits(state.settings.totalDays)} วัน ${notAssigned > 0 ? `<span class="text-xs text-orange-600 ml-1">(ขาด ${toThaiDigits(notAssigned)})</span>` : ''}</span>
       <span class="${ok ? 'text-green-600' : 'text-red-500'} font-medium text-sm">${ok ? '✓ ครบ' : '✗ ไม่ครบ'}</span>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
       ${[0,1,2,3,4].map(i => { const cnt = getPeriodDays(i).length;
-        return `<div class="border rounded-lg p-3 ${state.activePeriod===i?'bg-blue-50 border-blue-400':'bg-slate-50'} cursor-pointer active:scale-95 transition" onclick="setActivePeriod(${i})">
+        return `<div class="border rounded-lg p-3 ${state.activePeriod===i?'bg-blue-50 border-blue-400':'bg-slate-50'} cursor-pointer" onclick="setActivePeriod(${i})">
           <p class="text-xs text-slate-500">งวดที่ ${toThaiDigits(i+1)}</p>
           <p class="text-lg sm:text-xl font-bold text-blue-700">${toThaiDigits(cnt)} วัน</p>
           <p class="text-[11px] text-slate-500">${thMoney(cnt*state.settings.studentCount*state.settings.pricePerStudent)} ฿</p>
@@ -722,19 +903,12 @@ function autoAssignPeriods() {
 }
 function clearPeriods() { if (!confirm('ล้าง?')) return; state.periodAssignments = {}; saveState(); renderPeriods(); }
 
-function menuOptions(f, it) {
-  let c, cur;
-  if (f === 'main') { c = ['เมนูผัด', 'เมนูต้ม', 'เมนูเส้น', 'น้ำพริก']; cur = it.main; }
-  else if (f === 'veg') { c = ['ผัก']; cur = it.veg; }
-  else if (f === 'dessert') { c = ['ของหวาน']; cur = it.dessert; }
-  else if (f === 'fruit') { c = ['ผลไม้']; cur = it.fruit; }
-  return state.menus.filter(m => c.includes(m.cat)).map(m => `<option ${m.name===cur?'selected':''}>${m.name}</option>`).join('');
-}
-
-// ============ อัลกอริทึมสุ่มรายสัปดาห์ ============
+// ============ SHUFFLE (ใหม่) ============
+// Pattern: จ.=ผัด+ผลไม้ / อ.=ต้ม+ของหวาน / พ.=น้ำพริก(สลับ)/ลาบ+ผลไม้ / พฤ.=ต้ม+ของหวาน / ศ.=เส้น+ไอศกรีม(สลับ)/ของหวาน
 function shuffleAll() {
   const days = buildWorkingDays();
   if (!days.length) { toast('ไม่มีวันทำการ', true); return; }
+
   const start = new Date(state.settings.startDate);
   const weekMap = new Map();
   days.forEach(dateStr => {
@@ -746,103 +920,71 @@ function shuffleAll() {
   });
   const weeks = [...weekMap.entries()].sort((a,b)=>a[0]-b[0]).map(([_,v])=>v);
 
-  const mains = state.menus.filter(m => m.cat === 'เมนูผัด' && !m.name.includes('ลาบ') && !m.name.includes('ยำ'));
-  const larbs = state.menus.filter(m => m.name.includes('ลาบ') || m.name.includes('ยำ'));
-  const soups = state.menus.filter(m => m.cat === 'เมนูต้ม');
-  const noodles = state.menus.filter(m => m.cat === 'เมนูเส้น');
-  const chilis = state.menus.filter(m => m.cat === 'น้ำพริก');
-  const vegs = state.menus.filter(m => m.cat === 'ผัก');
-  const desserts = state.menus.filter(m => m.cat === 'ของหวาน' && !m.name.includes('ไอศกรีม'));
-  const iceCreams = state.menus.filter(m => m.name.includes('ไอศกรีม'));
-  const fruits = state.menus.filter(m => m.cat === 'ผลไม้');
+  const pool = {
+    ผัด: state.menus.filter(m => m.cat === 'ผัด'),
+    ต้ม: state.menus.filter(m => m.cat === 'ต้ม'),
+    เส้น: state.menus.filter(m => m.cat === 'เส้น'),
+    น้ำพริก: state.menus.filter(m => m.cat === 'น้ำพริก' && !m.name.includes('ลาบ')),
+    ลาบ: state.menus.filter(m => m.name.includes('ลาบ')),
+    ของหวาน: state.menus.filter(m => m.cat === 'ของหวาน' && !m.name.includes('ไอศกรีม')),
+    ไอศกรีม: state.menus.filter(m => m.name.includes('ไอศกรีม')),
+    ผลไม้: state.menus.filter(m => m.cat === 'ผลไม้'),
+  };
 
   const used = {};
-  function pick(pool, key) {
-    if (!pool || !pool.length) return null;
-    if (!used[key]) used[key] = [];
-    let avail = pool.filter(x => !used[key].includes(x.id));
-    if (!avail.length) { used[key] = []; avail = pool; }
+  function pick(poolKey) {
+    const arr = pool[poolKey];
+    if (!arr || !arr.length) return null;
+    if (!used[poolKey]) used[poolKey] = [];
+    let avail = arr.filter(x => !used[poolKey].includes(x.id));
+    if (!avail.length) { used[poolKey] = []; avail = arr; }
     const chosen = avail[Math.floor(Math.random() * avail.length)];
-    used[key].push(chosen.id);
+    used[poolKey].push(chosen.id);
     return chosen;
   }
 
   const schedule = [];
   weeks.forEach((weekDays, weekIdx) => {
-    const isChiliWeek = weekIdx % 2 === 1;
-    const isIceCreamWeek = weekIdx % 2 === 1;
-    const numDays = weekDays.length;
-    if (numDays === 0) return;
-
-    let slots = ['noodle', 'soup', 'soup'];
-    if (isChiliWeek) slots.push('chili', 'larb');
-    else slots.push('main', 'main');
-
-    if (slots.length > numDays) {
-      const priority = ['noodle', 'soup', 'soup', 'main', 'main', 'chili', 'larb'];
-      slots = [];
-      for (const p of priority) {
-        if (slots.length >= numDays) break;
-        if ((p === 'chili' || p === 'larb') && !isChiliWeek) continue;
-        if (p === 'chili' && slots.includes('chili')) continue;
-        if (p === 'larb' && slots.includes('larb')) continue;
-        slots.push(p);
-      }
-      while (slots.length < numDays) slots.push('main');
-    } else while (slots.length < numDays) slots.push('main');
-
-    for (let i = slots.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [slots[i], slots[j]] = [slots[j], slots[i]];
-    }
-
-    let fridayIdx = -1;
-    weekDays.forEach((dateStr, i) => { if (new Date(dateStr).getDay() === 5) fridayIdx = i; });
-
+    const isOddWeek = weekIdx % 2 === 0; // สัปดาห์ที่ 1,3,5... (index 0,2,4)
     const entries = weekDays.map((dateStr, i) => {
-      const slot = slots[i];
-      let main = null, mainCat = '';
-      if (slot === 'noodle') { main = pick(noodles, 'noodle'); mainCat = 'เมนูเส้น'; }
-      else if (slot === 'soup') { main = pick(soups, 'soup'); mainCat = 'เมนูต้ม'; }
-      else if (slot === 'main') { main = pick(mains, 'main'); mainCat = 'เมนูผัด'; }
-      else if (slot === 'chili') { main = pick(chilis, 'chili'); mainCat = 'น้ำพริก'; }
-      else if (slot === 'larb') { main = larbs.length ? pick(larbs, 'larb') : pick(mains, 'main'); mainCat = 'เมนูผัด'; }
-      const veg = pick(vegs, 'veg');
-      return { dateStr, main, mainCat, veg, isFriday: i === fridayIdx, dessert: null, fruit: null };
-    });
+      const d = new Date(dateStr);
+      const day = d.getDay(); // 1=จ, 2=อ, 3=พ, 4=พฤ, 5=ศ
+      let main = null, mainCat = '', dessert = null, fruit = null;
 
-    const nonFriday = entries.filter(e => !e.isFriday);
-    const shuffledNonFri = [...nonFriday].sort(() => Math.random() - 0.5);
-    const fridayEntry = entries.find(e => e.isFriday);
-    if (fridayEntry) {
-      if (isIceCreamWeek && iceCreams.length) {
-        fridayEntry.dessert = pick(iceCreams, 'ice') || pick(desserts, 'dessert');
+      if (day === 1) { // จ. ผัด + ผลไม้
+        main = pick('ผัด'); mainCat = 'ผัด';
+        fruit = pick('ผลไม้');
+      } else if (day === 2) { // อ. ต้ม + ของหวาน
+        main = pick('ต้ม'); mainCat = 'ต้ม';
+        dessert = pick('ของหวาน');
+      } else if (day === 3) { // พ. น้ำพริก(คี่)/ลาบ(คู่) + ผลไม้
+        if (isOddWeek) { main = pick('น้ำพริก'); mainCat = 'น้ำพริก'; }
+        else { main = pick('ลาบ'); mainCat = 'น้ำพริก'; }
+        fruit = pick('ผลไม้');
+      } else if (day === 4) { // พฤ. ต้ม + ของหวาน
+        main = pick('ต้ม'); mainCat = 'ต้ม';
+        dessert = pick('ของหวาน');
+      } else if (day === 5) { // ศ. เส้น + ไอศกรีม(คี่)/ของหวาน(คู่)
+        main = pick('เส้น'); mainCat = 'เส้น';
+        if (isOddWeek) { dessert = pick('ไอศกรีม') || pick('ของหวาน'); }
+        else { dessert = pick('ของหวาน'); }
       } else {
-        fridayEntry.dessert = pick(desserts, 'dessert');
+        main = pick('ผัด'); mainCat = 'ผัด';
       }
-    }
-    let dessertCount = fridayEntry ? 1 : 0;
-    for (const e of shuffledNonFri) {
-      if (dessertCount >= 2) break;
-      e.dessert = pick(desserts, 'dessert');
-      dessertCount++;
-    }
-    if (dessertCount < 2) {
-      for (const e of entries) {
-        if (dessertCount >= 2) break;
-        if (!e.dessert) { e.dessert = pick(desserts, 'dessert'); dessertCount++; }
-      }
-    }
-    entries.forEach(e => { if (!e.dessert) e.fruit = pick(fruits, 'fruit'); });
+      return { dateStr, dayName: TH_DAYS[day], main, mainCat, dessert, fruit };
+    });
 
     entries.forEach(e => {
       if (!e.main) return;
       schedule.push({
-        date: e.dateStr, dayName: TH_DAYS[new Date(e.dateStr).getDay()],
-        main: e.main.name, mainId: e.main.id, isNoodle: e.mainCat === 'เมนูเส้น',
-        mainCat: e.mainCat, veg: e.veg ? e.veg.name : '',
-        dessert: e.dessert ? e.dessert.name : '', fruit: e.fruit ? e.fruit.name : '',
-        locked: false, period: state.periodAssignments[e.dateStr] != null ? state.periodAssignments[e.dateStr] : 0,
+        date: e.dateStr,
+        dayName: e.dayName,
+        main: e.main.name, mainId: e.main.id, mainCat: e.mainCat,
+        isNoodle: e.mainCat === 'เส้น',
+        dessert: e.dessert ? e.dessert.name : '',
+        fruit: e.fruit ? e.fruit.name : '',
+        locked: false,
+        period: state.periodAssignments[e.dateStr] != null ? state.periodAssignments[e.dateStr] : 0,
       });
     });
   });
@@ -854,10 +996,18 @@ function shuffleAll() {
     });
   }
   state.schedule = schedule;
-  saveState(); renderSchedule(); renderMenuEditor();
+  saveState(); renderSchedule();
   toast(`สุ่ม ${toThaiDigits(schedule.length)} วันสำเร็จ`);
 }
-function resetSchedule() { if (!confirm('ล้าง?')) return; state.schedule=[]; saveState(); renderSchedule(); renderMenuEditor(); }
+function resetSchedule() { if (!confirm('ล้าง?')) return; state.schedule=[]; saveState(); renderSchedule(); }
+
+function menuOptions(f, it) {
+  let cats, cur;
+  if (f === 'main') { cats = ['ผัด', 'ต้ม', 'เส้น', 'น้ำพริก']; cur = it.main; }
+  else if (f === 'dessert') { cats = ['ของหวาน']; cur = it.dessert; }
+  else if (f === 'fruit') { cats = ['ผลไม้']; cur = it.fruit; }
+  return state.menus.filter(m => cats.includes(m.cat)).map(m => `<option ${m.name===cur?'selected':''}>${m.name}</option>`).join('');
+}
 
 function renderSchedule() {
   const w = document.getElementById('scheduleWrap'); if (!w) return;
@@ -870,9 +1020,7 @@ function renderSchedule() {
 
     const mobileCards = items.map(it => {
       const gi = state.schedule.indexOf(it);
-      const catColor = it.mainCat === 'เมนูเส้น' ? 'cat-noodle' :
-                      it.mainCat === 'เมนูต้ม' ? 'cat-soup' :
-                      it.mainCat === 'น้ำพริก' ? 'cat-chili' : 'cat-main';
+      const catColor = 'cat-' + (it.mainCat || 'อื่นๆ');
       return `<div class="border border-slate-200 rounded-lg p-3 space-y-2">
         <div class="flex items-center justify-between">
           <div>
@@ -885,11 +1033,7 @@ function renderSchedule() {
           <div class="flex items-center gap-1 mb-1"><span class="badge ${catColor}">${it.mainCat || '-'}</span></div>
           <select class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm bg-white" onchange="changeScheduleItem(${gi},'main',this.value)">${menuOptions('main',it)}</select>
         </div>
-        <div class="grid grid-cols-3 gap-2">
-          <div>
-            <label class="text-[11px] text-slate-500 block mb-1">ผัก</label>
-            <select class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs bg-white" onchange="changeScheduleItem(${gi},'veg',this.value)">${menuOptions('veg',it)}</select>
-          </div>
+        <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="text-[11px] text-slate-500 block mb-1">ของหวาน</label>
             <select class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-xs bg-white" onchange="changeScheduleItem(${gi},'dessert',this.value)"><option value="">—</option>${menuOptions('dessert',it)}</select>
@@ -907,23 +1051,19 @@ function renderSchedule() {
         <thead class="bg-slate-50"><tr>
           <th class="text-left px-4 py-2 w-28">วันที่</th>
           <th class="text-left px-4 py-2">เมนูหลัก</th>
-          <th class="text-left px-4 py-2 w-36">ผัก</th>
           <th class="text-left px-4 py-2 w-36">ของหวาน</th>
           <th class="text-left px-4 py-2 w-36">ผลไม้</th>
           <th class="w-14"></th>
         </tr></thead>
         <tbody>${items.map(it => {
           const gi = state.schedule.indexOf(it);
-          const catColor = it.mainCat === 'เมนูเส้น' ? 'cat-noodle' :
-                          it.mainCat === 'เมนูต้ม' ? 'cat-soup' :
-                          it.mainCat === 'น้ำพริก' ? 'cat-chili' : 'cat-main';
+          const catColor = 'cat-' + (it.mainCat || 'อื่นๆ');
           return `<tr class="border-t">
             <td class="px-4 py-2 font-medium">${toThaiDateShort(it.date)}<br><span class="text-xs text-slate-500">${it.dayName}</span></td>
             <td class="px-4 py-2">
               <div class="mb-1"><span class="badge ${catColor}">${it.mainCat || '-'}</span></div>
               <select class="w-full border rounded px-2 py-1.5 text-sm" onchange="changeScheduleItem(${gi},'main',this.value)">${menuOptions('main',it)}</select>
             </td>
-            <td class="px-4 py-2"><select class="w-full border rounded px-2 py-1.5 text-sm" onchange="changeScheduleItem(${gi},'veg',this.value)">${menuOptions('veg',it)}</select></td>
             <td class="px-4 py-2"><select class="w-full border rounded px-2 py-1.5 text-sm" onchange="changeScheduleItem(${gi},'dessert',this.value)"><option value="">—</option>${menuOptions('dessert',it)}</select></td>
             <td class="px-4 py-2"><select class="w-full border rounded px-2 py-1.5 text-sm" onchange="changeScheduleItem(${gi},'fruit',this.value)"><option value="">—</option>${menuOptions('fruit',it)}</select></td>
             <td class="px-4 py-2 text-center"><button onclick="toggleLock(${gi})">${it.locked?'🔒':'🔓'}</button></td>
@@ -943,78 +1083,417 @@ function changeScheduleItem(idx, f, v) {
   state.schedule[idx][f] = v;
   if (f === 'main') {
     const m = state.menus.find(x => x.name === v);
-    state.schedule[idx].isNoodle = m && m.cat === 'เมนูเส้น';
+    state.schedule[idx].isNoodle = m && m.cat === 'เส้น';
     state.schedule[idx].mainCat = m ? m.cat : '';
   }
-  saveState(); renderSchedule(); renderMenuEditor();
+  saveState();
+  renderSchedule();
+  renderDelivery();
 }
 function toggleLock(i) { state.schedule[i].locked = !state.schedule[i].locked; saveState(); renderSchedule(); }
 
-// ============ Menu editor ============
-function toggleMenuEditor() {
-  const body = document.getElementById('menuEditorBody');
-  const chev = document.getElementById('menuEditorChevron');
-  if (!body) return;
-  body.classList.toggle('hidden');
-  if (chev) chev.textContent = body.classList.contains('hidden') ? '▶' : '▼';
+// ============ DELIVERY PAGE ============
+function renderDelivery() {
+  const d = state.delivery;
+  const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ''; };
+  setV('dv_foodNoteNumber', d.foodNoteNumber);
+  setV('dv_foodNoteYear', d.foodNoteYear);
+  setV('dv_poNumber', d.poNumber);
+  setV('dv_poDate', d.poDate);
+  setV('dv_taxRate', d.taxRate);
+  setV('dv_taxId', d.taxId);
+  setV('dv_receiptNumber', d.receiptNumber);
+  setV('dv_receiverName', d.receiverName);
+  setV('dv_receiverAddress', d.receiverAddress);
+  setV('dv_senderName', d.senderName);
+  setV('dv_receiverDisplay', d.receiverDisplay);
+
+  // Period dates
+  const pd = document.getElementById('dv_periodDates');
+  if (pd) {
+    pd.innerHTML = [0,1,2,3,4].map(i => {
+      const items = state.schedule.filter(it => it.period === i).sort((a,b) => a.date.localeCompare(b.date));
+      const lastDate = items.length ? items[items.length-1].date : '';
+      const autoVal = lastDate;
+      const currentVal = d.periodEndDates?.[i] || autoVal;
+      return `<div class="flex items-center gap-2 text-xs">
+        <span class="w-16 font-medium">งวดที่ ${toThaiDigits(i+1)}</span>
+        <input type="date" class="flex-1 border rounded px-2 py-1.5" value="${currentVal}" onchange="updatePeriodDate(${i}, this.value)" />
+        ${lastDate ? `<span class="text-slate-400 text-[10px]">(จริง: ${toThaiDateShort(lastDate)})</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+  // Period select
+  const sel = document.getElementById('dv_periodSelect');
+  if (sel) {
+    sel.innerHTML = [0,1,2,3,4].map(i => {
+      const cnt = state.schedule.filter(it => it.period === i).length;
+      return `<option value="${i}">งวดที่ ${toThaiDigits(i+1)} (${toThaiDigits(cnt)} วัน)</option>`;
+    }).join('');
+  }
 }
-function renderMenuEditor() {
-  const el = document.getElementById('menuEditorTable');
-  if (!el) return;
-  if (!state.schedule.length) {
-    el.innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">ยังไม่มีตารางอาหาร</p>';
+function updatePeriodDate(i, val) {
+  if (!state.delivery.periodEndDates) state.delivery.periodEndDates = {};
+  state.delivery.periodEndDates[i] = val;
+  saveState();
+}
+['dv_foodNoteNumber','dv_foodNoteYear','dv_poNumber','dv_poDate','dv_taxRate','dv_taxId','dv_receiptNumber','dv_receiverName','dv_receiverAddress','dv_senderName','dv_receiverDisplay'].forEach(id => {
+  document.addEventListener('input', e => {
+    if (e.target.id !== id) return;
+    const key = id.replace('dv_', '');
+    const v = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
+    state.delivery[key] = v;
+    saveState();
+  });
+  document.addEventListener('change', e => {
+    if (e.target.id !== id) return;
+    const key = id.replace('dv_', '');
+    const v = e.target.type === 'number' ? Number(e.target.value) : e.target.value;
+    state.delivery[key] = v;
+    saveState();
+  });
+});
+
+// ============ EXPORT WORD: FOOD LIST ============
+async function generateFoodList() {
+  if (!state.schedule.length) { toast('ยังไม่มีตารางอาหาร', true); return; }
+  toast('กำลังสร้างรายการอาหาร...');
+  try {
+    const children = buildFoodListChildren();
+    const doc = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน', title: 'ใบสรุปรายการประกอบอาหาร', revision: 1,
+      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
+      sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children }],
+    });
+    let blob = await Packer.toBlob(doc);
+    blob = await fixThaiTypography(blob);
+    const filename = `รายการอาหาร-${state.settings.schoolName}-${state.settings.year}.docx`;
+    saveAs(blob, filename);
+    toast('ดาวน์โหลดแล้ว — กำลังอัปโหลดขึ้น Drive...');
+    const up = await uploadWordToCloud(blob, filename, 'รายการอาหาร');
+    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); refreshFiles(); }
+    else if (APPS_SCRIPT_URL) toast('อัปโหลดขึ้น Drive ไม่สำเร็จ', true);
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
+}
+
+function buildFoodListChildren() {
+  const s = state.settings, d = state.delivery;
+  const children = [];
+  const MARG = { top: 60, bottom: 60, left: 100, right: 100 };
+  state.schedule.forEach((it, idx) => {
+    if (idx > 0) children.push(pageBreak());
+    const amount = s.studentCount * s.pricePerStudent;
+    const foodLines = [];
+    foodLines.push(...it.main.split(' + ').map(x => x.trim()).filter(Boolean));
+    if (it.dessert) foodLines.push(it.dessert);
+    if (it.fruit) foodLines.push(it.fruit);
+    children.push(p('ใบสรุปรายการประกอบอาหาร', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
+    children.push(p(`แนบท้ายใบส่งมอบงานเลขที่ ${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)} ลงวันที่ ${toThaiDate(it.date)}`, { align: AlignmentType.CENTER, before: 120, keepNext: true }));
+    children.push(p(' ', { before: 60 }));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ tableHeader: true, cantSplit: true, children: [
+          new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('วัน/เดือน/ปี', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{size:38,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการอาหาร', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวน ชุด', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ราคาต่อ ชุด', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รวมเป็นเงิน', { align: AlignmentType.CENTER, bold: true })] }),
+        ]}),
+        new TableRow({ cantSplit: true, children: [
+          new TableCell({ margins: MARG, children: [p(toThaiDateShort(it.date))] }),
+          new TableCell({ margins: MARG, children: foodLines.map(f => p('- ' + f)) }),
+          new TableCell({ margins: MARG, children: [p(toThaiDigits(s.studentCount), { align: AlignmentType.CENTER })] }),
+          new TableCell({ margins: MARG, children: [p(toThaiDigits(s.pricePerStudent), { align: AlignmentType.CENTER })] }),
+          new TableCell({ margins: MARG, children: [p(thMoney(amount), { align: AlignmentType.RIGHT })] }),
+        ]}),
+      ],
+    }));
+    children.push(p(' ', { before: 60 }));
+    children.push(twoSig(
+      ['....................................................', '....................................................', `(${d.senderName})`, 'ผู้ส่ง', `วันที่ ${toThaiDate(it.date)}`],
+      ['....................................................', '....................................................', `(${d.receiverDisplay})`, 'ผู้รับ', `วันที่ ${toThaiDate(it.date)}`]
+    ));
+  });
+  return children;
+}
+
+// ============ EXPORT WORD: PERIOD ============
+async function generateOnePeriod() {
+  const sel = document.getElementById('dv_periodSelect');
+  const pIdx = sel ? Number(sel.value) : 0;
+  await generatePeriod(pIdx);
+}
+async function generateAllPeriods() {
+  for (let i = 0; i < 5; i++) {
+    const items = state.schedule.filter(it => it.period === i);
+    if (!items.length) continue;
+    await generatePeriod(i);
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  toast('สร้างครบทุกงวด');
+}
+async function generatePeriod(pIdx) {
+  const items = state.schedule.filter(it => it.period === pIdx);
+  if (!items.length) { toast(`ไม่มีข้อมูลงวดที่ ${toThaiDigits(pIdx+1)}`, true); return; }
+  const prog = document.getElementById('dv_progress');
+  if (prog) prog.textContent = `กำลังสร้างงวดที่ ${toThaiDigits(pIdx+1)}...`;
+  toast(`กำลังสร้างเอกสารงวดที่ ${toThaiDigits(pIdx+1)}...`);
+  try {
+    const children = buildPeriodChildren(pIdx);
+    const doc = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน', title: `เอกสารงวดที่ ${pIdx+1}`, revision: 1,
+      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
+      sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children }],
+    });
+    let blob = await Packer.toBlob(doc);
+    blob = await fixThaiTypography(blob);
+    const filename = `เอกสารงวดที่-${pIdx+1}-${state.settings.schoolName}-${state.settings.year}.docx`;
+    saveAs(blob, filename);
+    toast('ดาวน์โหลดแล้ว — กำลังอัปโหลดขึ้น Drive...');
+    const up = await uploadWordToCloud(blob, filename, 'เอกสารงวด');
+    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); refreshFiles(); }
+    else if (APPS_SCRIPT_URL) toast('อัปโหลดขึ้น Drive ไม่สำเร็จ', true);
+    if (prog) prog.textContent = `สร้างงวดที่ ${toThaiDigits(pIdx+1)} สำเร็จ`;
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
+}
+
+function buildPeriodChildren(pIdx) {
+  const s = state.settings, d = state.delivery;
+  const items = state.schedule.filter(it => it.period === pIdx).sort((a,b) => a.date.localeCompare(b.date));
+  const amount = items.length * s.studentCount * s.pricePerStudent;
+  const taxRate = Number(d.taxRate) || 0;
+  const taxAmount = +(amount * taxRate / 100).toFixed(2);
+  const netAmount = +(amount - taxAmount).toFixed(2);
+  const dateStart = items[0].date;
+  const dateEnd = d.periodEndDates?.[pIdx] || items[items.length-1].date;
+  const MARG = { top: 60, bottom: 60, left: 100, right: 100 };
+  const children = [];
+
+  // (1) ใบส่งงาน
+  children.push(p(`ใบส่งงาน งวดที่ ${toThaiDigits(pIdx+1)}`, { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
+  children.push(p(`เลขที่เอกสาร..............${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)}.............. บริษัท/ห้าง/ร้าน..............${s.contractorName}..............`, { before: 240 }));
+  children.push(p(`ที่อยู่ ${toThaiDigits(s.contractorAddress)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 120 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(p(`นามผู้ว่าจ้าง     ${s.schoolName}`, { keepNext: true }));
+  children.push(p(`ที่อยู่  ${toThaiDigits(s.address)}`, { keepNext: true, before: 60 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true, children: [
+        new TableCell({ width:{size:10,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ลำดับ', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:60,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการ', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวน', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงิน', { align: AlignmentType.CENTER, bold: true })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p(toThaiDigits(1), { align: AlignmentType.CENTER })] }),
+        new TableCell({ margins: MARG, children:[p(`ค่าเหมาจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)}`)] }),
+        new TableCell({ margins: MARG, children:[p(`${toThaiDigits(items.length)} วัน`, { align: AlignmentType.CENTER })] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ columnSpan:3, margins: MARG, children:[p('รวมเป็นเงิน', { align: AlignmentType.RIGHT, bold: true })] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT, bold: true })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ columnSpan:3, margins: MARG, children:[p(`(จำนวนเงินตัวอักษร) ${formatMoneyThai(amount)}`, { bold: true })] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT, bold: true })] }),
+      ]}),
+    ],
+  }));
+  children.push(p(' ', { before: 200 }));
+  children.push(twoSig(
+    ['....................................................', '....................................................', `(${d.senderName})`, 'ผู้ส่ง', `วันที่ ${toThaiDate(dateEnd)}`],
+    ['....................................................', '....................................................', `(${d.receiverDisplay})`, 'ผู้รับ', `วันที่ ${toThaiDate(dateEnd)}`]
+  ));
+
+  // (2) ใบตรวจรับพัสดุ
+  children.push(pageBreak());
+  children.push(p('ใบตรวจรับพัสดุ', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
+  children.push(p(`เขียนที่ ${s.schoolName}`, { align: AlignmentType.RIGHT, before: 120 }));
+  children.push(p(s.address, { align: AlignmentType.RIGHT, before: 60 }));
+  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(p(`ด้วย บริษัท/ห้างหุ้นส่วน/ร้าน/หน่วยงาน.....${s.contractorName}.....ได้ส่งมอบงานจ้างประกอบอาหาร ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${toThaiDigits(pIdx+1)} ตามใบสั่งจ้าง เลขที่ ${toThaiDigits(d.poNumber)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(d.poDate)}`, { indent: { firstLine: INDENT } }));
+  children.push(p('เพื่อให้ ☐ ผู้ตรวจรับพัสดุ ☐ คณะกรรมการตรวจรับพัสดุ ทำการตรวจรับแล้ว ปรากฏผล ดังนี้', { indent: { firstLine: INDENT }, before: 120 }));
+  children.push(p(`1. ครบกำหนด วันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`2. ส่งมอบ วันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`3. ได้ตรวจรับพัสดุตามใบมอบงาน เลขที่ ${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)} ลงวันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`4. ได้ตรวจรับและให้ถือว่าพัสดุ ☐ ถูกต้อง จำนวน ${toThaiDigits(items.length)} รายการ`, { indent: { firstLine: INDENT } }));
+  children.push(p('         ☐ ไม่ถูกต้อง จำนวน - รายการ', { indent: { firstLine: INDENT } }));
+  children.push(p(`ตั้งแต่วันที่ ${toThaiDate(dateStart)} ถึงวันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`เห็นสมควรให้จ่ายเงินค่าจ้างประกอบอาหาร งวดที่ ${toThaiDigits(pIdx+1)} ให้แก่ ${s.contractorName} เป็นจำนวนเงินทั้งสิ้น ${thMoney(amount)} บาท (${formatMoneyThai(amount)})`, { indent: { firstLine: INDENT }, before: 120 }));
+  children.push(p(`จึงรายงานต่อผู้อำนวยการ${s.schoolName} เพื่อโปรดทราบผลการตรวจรับ ตามนัยข้อ 175`, { indent: { firstLine: INDENT }, before: 120, keepNext: true, keepLines: true }));
+  children.push(p(' ', { before: 240 }));
+  state.committee.forEach((c) => {
+    children.push(p(`ลงชื่อ....................................................${c.role || 'กรรมการ'}`, { align: AlignmentType.RIGHT, before: 200 }));
+    children.push(p(`(${c.name})`, { align: AlignmentType.RIGHT }));
+  });
+
+  // (3) บันทึกขออนุมัติ
+  children.push(pageBreak());
+  children.push(memoHeaderRow());
+  children.push(p('ส่วนราชการ' + NBSP + NBSP + s.schoolName, { before: 120 }));
+  children.push(rowLR(`ที่${NBSP}${NBSP}${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)}`, `วันที่${NBSP}${NBSP}${toThaiDate(dateEnd)}`));
+  children.push(headUnderline('เรื่อง', 'รายงานผลการตรวจรับและขออนุมัติเบิกจ่ายเงิน'));
+  children.push(p('เรียน' + NBSP + NBSP + 'ผู้อำนวยการ' + s.schoolName, { before: 240 }));
+  children.push(p(`ตามที่${s.schoolName}ได้อนุมัติให้จัดจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) กับ ${s.contractorName} งวดที่ ${toThaiDigits(pIdx+1)} จำนวน ${toThaiDigits(items.length)} รายการ ตามใบสั่งจ้าง เลขที่ ${toThaiDigits(d.poNumber)} / ${toThaiDigits(s.year)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`บัดนี้ผู้ขายได้ส่งมอบพัสดุแล้ว ตามใบส่งของ เลขที่ ${toThaiDigits(d.foodNoteNumber)} / ${toThaiDigits(d.foodNoteYear)} ลงวันที่ ${toThaiDate(dateEnd)} และคณะกรรมการตรวจรับพัสดุได้ทำการตรวจรับพัสดุไว้ถูกต้องแล้ว`, { indent: { firstLine: INDENT }, before: 120 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ width:{size:60,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงินตามสัญญา')] }),
+        new TableCell({ width:{size:40,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(thMoney(amount) + ' บาท', { align: AlignmentType.RIGHT })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p('ค่าปรับ')] }),
+        new TableCell({ margins: MARG, children:[p('- บาท', { align: AlignmentType.RIGHT })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p(`หักภาษี ณ ที่จ่าย (${toThaiDigits(taxRate)}%)`)] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(taxAmount) + ' บาท', { align: AlignmentType.RIGHT })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p('คงจ่ายเงินจริง', { bold: true })] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(netAmount) + ' บาท', { align: AlignmentType.RIGHT, bold: true })] }),
+      ]}),
+    ],
+  }));
+  children.push(p(`(${formatMoneyThai(netAmount)})`, { align: AlignmentType.RIGHT, before: 60 }));
+  children.push(p('จึงเสนอเพื่อโปรดทราบผลการตรวจรับและขออนุมัติเบิกจ่ายต่อไป', { indent: { firstLine: INDENT }, before: 240 }));
+  children.push(p(' ', { before: 200 }));
+  children.push(p('ความเห็นเจ้าหน้าที่การเงิน', { bold: true, keepNext: true }));
+  children.push(p(`ได้ตรวจสอบหลักฐานแล้วมีเอกสารครบถ้วน`, { indent: { firstLine: INDENT } }));
+  children.push(p(`เห็นควรอนุมัติเบิกจ่ายเงิน งวดที่ ${toThaiDigits(pIdx+1)} จำนวน ${thMoney(amount)} บาท (${formatMoneyThai(amount)}) ให้แก่ ${s.contractorName}`, { indent: { firstLine: INDENT }, before: 120 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(p('☐ ทราบ   ☐ อนุมัติ', { before: 120 }));
+  children.push(sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(dateEnd)));
+
+  // (4) รายงานคณะกรรมการ
+  children.push(pageBreak());
+  children.push(p('บันทึกรายงานผู้ควบคุมและคณะกรรมการตรวจการประกอบอาหารกลางวัน', { align: AlignmentType.CENTER, bold: true, size: 32, keepNext: true }));
+  children.push(p(`เขียนที่ ${s.schoolName}`, { align: AlignmentType.RIGHT, before: 120 }));
+  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(p(`ตามที่${s.schoolName}ได้ตกลงจ้าง ${s.contractorName} ประกอบอาหารกลางวัน ตามบันทึกข้อตกลงจ้างเลขที่ ${toThaiDigits(d.poNumber)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(d.poDate)} บัดนี้ผู้รับจ้างได้ส่งมอบพัสดุทุกวันตามข้อตกลง`, { indent: { firstLine: INDENT } }));
+  children.push(p(' ', { before: 120 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true, children: [
+        new TableCell({ width:{size:18,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('วัน เดือน ปี', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:42,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการอาหารตาม TOR', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ผลการดำเนินงาน', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ผู้ควบคุม/กรรมการ', { align: AlignmentType.CENTER, bold: true })] }),
+      ]}),
+      ...items.map(it => new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p(toThaiDateShort(it.date))] }),
+        new TableCell({ margins: MARG, children: menuLine(it).split(' + ').map(f => p('- ' + f)) }),
+        new TableCell({ margins: MARG, children:[p('ส่งมอบครบตามกำหนด')] }),
+        new TableCell({ margins: MARG, children:[p('')] }),
+      ]})),
+    ],
+  }));
+  children.push(p(' ', { before: 240 }));
+  children.push(p('ความเห็นของผู้อำนวยการสถานศึกษา', { bold: true, keepNext: true }));
+  children.push(p('☐ ทราบผลการดำเนินการ', { indent: { firstLine: INDENT } }));
+  children.push(sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`));
+
+  // (5) ใบสำคัญรับเงิน
+  children.push(pageBreak());
+  children.push(p('ใบสำคัญรับเงิน', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
+  children.push(p(`ที่  ${d.receiptNumber || 'บก.34'} / ${toThaiDigits(d.foodNoteYear)}`, { align: AlignmentType.RIGHT, before: 120 }));
+  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
+  children.push(p(' ', { before: 120 }));
+  children.push(p(`ข้าพเจ้า  ${d.receiverName}  อยู่บ้านเลขที่  ${toThaiDigits(d.receiverAddress)}`, { indent: { firstLine: INDENT } }));
+  children.push(p(`ได้รับเงินจาก  ${s.schoolName}  ดังรายการต่อไปนี้`, { indent: { firstLine: INDENT }, before: 120 }));
+  children.push(new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true, children: [
+        new TableCell({ width:{size:70,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการ', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ width:{size:30,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงิน : บาท', { align: AlignmentType.CENTER, bold: true })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children: [
+          p(`ได้รับเงินค่าจ้างเหมาประกอบอาหารปรุงสำเร็จ อาหารกลางวัน งวดที่ ${toThaiDigits(pIdx+1)}`),
+          p(`${toThaiDigits(s.studentCount)} คน X ${toThaiDigits(s.pricePerStudent)} บาท X ${toThaiDigits(items.length)} วัน`),
+        ]}),
+        new TableCell({ margins: MARG, children:[p(thMoney(amount) + '.-', { align: AlignmentType.RIGHT })] }),
+      ]}),
+      new TableRow({ cantSplit: true, children: [
+        new TableCell({ margins: MARG, children:[p(`(ตัวอักษร) (${formatMoneyThai(amount)}) รวมเงินทั้งสิ้น`, { bold: true })] }),
+        new TableCell({ margins: MARG, children:[p(thMoney(amount) + '.-', { align: AlignmentType.RIGHT, bold: true })] }),
+      ]}),
+    ],
+  }));
+  children.push(p(' ', { before: 240 }));
+  children.push(twoSig(
+    ['ลงชื่อ......................................................ผู้รับเงิน', `(${d.receiverName})`],
+    ['ลงชื่อ......................................................ผู้จ่ายเงิน', `(${d.receiverDisplay})`]
+  ));
+
+  return children;
+}
+
+// ============ FILES PAGE ============
+async function refreshFiles() {
+  if (!APPS_SCRIPT_URL) {
+    document.getElementById('fileList').innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">ยังไม่ได้ตั้งค่า Cloud URL</p>';
     return;
   }
-  // Mobile cards + desktop table
-  const mobile = `<div class="lg:hidden p-2 space-y-2">${state.schedule.map((it, i) => {
-    const d = new Date(it.date); const isFri = d.getDay() === 5;
-    return `<div class="border rounded-lg p-2.5 space-y-2 ${isFri?'bg-blue-50/60':''}">
-      <div class="flex items-center justify-between">
-        <div class="text-sm font-medium">${toThaiDateShort(it.date)} <span class="text-xs text-slate-500">${it.dayName}</span></div>
-        ${isFri ? '<span class="text-[10px] bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">ศุกร์</span>' : ''}
-      </div>
-      <select class="w-full border rounded px-2 py-2 text-xs bg-white" onchange="changeScheduleItem(${i},'main',this.value)">${menuOptions('main',it)}</select>
-      <div class="grid grid-cols-3 gap-1.5">
-        <select class="border rounded px-1.5 py-1.5 text-[11px] bg-white" onchange="changeScheduleItem(${i},'veg',this.value)">${menuOptions('veg',it)}</select>
-        <select class="border rounded px-1.5 py-1.5 text-[11px] bg-white" onchange="changeScheduleItem(${i},'dessert',this.value)"><option value="">—</option>${menuOptions('dessert',it)}</select>
-        <select class="border rounded px-1.5 py-1.5 text-[11px] bg-white" onchange="changeScheduleItem(${i},'fruit',this.value)"><option value="">—</option>${menuOptions('fruit',it)}</select>
-      </div>
-    </div>`;
-  }).join('')}</div>`;
-
-  const desktop = `<div class="hidden lg:block">
-    <table class="w-full text-xs">
-      <thead class="bg-slate-100 sticky top-0"><tr>
-        <th class="text-left px-2 py-2 w-24">วันที่</th>
-        <th class="text-left px-2 py-2">เมนูหลัก</th>
-        <th class="text-left px-2 py-2 w-32">ผัก</th>
-        <th class="text-left px-2 py-2 w-32">ของหวาน</th>
-        <th class="text-left px-2 py-2 w-32">ผลไม้</th>
-      </tr></thead>
-      <tbody>${state.schedule.map((it, i) => {
-        const d = new Date(it.date); const isFri = d.getDay() === 5;
-        return `<tr class="border-t ${isFri ? 'bg-blue-50/50' : ''}">
-          <td class="px-2 py-2 font-medium whitespace-nowrap">${toThaiDateShort(it.date)}<br><span class="text-xs text-slate-500">${it.dayName}</span></td>
-          <td class="px-2 py-2"><select class="w-full border rounded px-2 py-1 text-xs" onchange="changeScheduleItem(${i},'main',this.value)">${menuOptions('main',it)}</select></td>
-          <td class="px-2 py-2"><select class="w-full border rounded px-2 py-1 text-xs" onchange="changeScheduleItem(${i},'veg',this.value)">${menuOptions('veg',it)}</select></td>
-          <td class="px-2 py-2"><select class="w-full border rounded px-2 py-1 text-xs" onchange="changeScheduleItem(${i},'dessert',this.value)"><option value="">—</option>${menuOptions('dessert',it)}</select></td>
-          <td class="px-2 py-2"><select class="w-full border rounded px-2 py-1 text-xs" onchange="changeScheduleItem(${i},'fruit',this.value)"><option value="">—</option>${menuOptions('fruit',it)}</select></td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table>
-  </div>`;
-
-  el.innerHTML = mobile + desktop;
+  document.getElementById('fileList').innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">กำลังโหลด...</p>';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=listFiles');
+    const data = await res.json();
+    if (data.ok && data.files) {
+      cloudFiles = data.files;
+      updateDashboard();
+      if (!cloudFiles.length) {
+        document.getElementById('fileList').innerHTML = '<p class="text-slate-400 text-center py-6 text-sm">ยังไม่มีไฟล์</p>';
+        return;
+      }
+      document.getElementById('fileList').innerHTML = cloudFiles.map(f => `
+        <div class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+          <div class="text-2xl">📄</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate">${f.name}</p>
+            <p class="text-xs text-slate-500">${f.folder || 'ไม่ระบุ'} · ${toThaiDateShort(f.createdAt.slice(0,10))} · ${f.size ? Math.round(f.size/1024)+' KB' : ''}</p>
+          </div>
+          <a href="${f.downloadUrl}" target="_blank" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium">⬇ ดาวน์โหลด</a>
+          <button onclick="deleteCloudFile('${f.id}')" class="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-xs">🗑️</button>
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('fileList').innerHTML = '<p class="text-red-400 text-center py-6 text-sm">โหลดไม่สำเร็จ</p>';
+    }
+  } catch(e) {
+    document.getElementById('fileList').innerHTML = `<p class="text-red-400 text-center py-6 text-sm">ผิดพลาด: ${e.message}</p>`;
+  }
+}
+async function deleteCloudFile(id) {
+  if (!confirm('ลบไฟล์นี้?')) return;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteFile', id }),
+      headers: { 'Content-Type': 'text/plain' },
+      redirect: 'follow',
+    });
+    const data = await res.json();
+    if (data.ok) { toast('ลบแล้ว'); refreshFiles(); }
+    else toast('ลบไม่สำเร็จ', true);
+  } catch(e) { toast('ผิดพลาด: ' + e.message, true); }
 }
 
+// ============ BACKUP ============
 function exportBackup() { const b = new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); saveAs(b,`backup-lunch-${Date.now()}.json`); toast('สำรองแล้ว'); }
-function importBackup(e) {
-  const f = e.target.files[0]; if (!f) return;
-  const r = new FileReader();
-  r.onload = async () => { try { const d = JSON.parse(r.result); state = {...state, ...d}; saveState(); await loadGarudaFromURL(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus(); renderGarudaPreview(); renderMenuEditor(); toast('โหลดสำเร็จ'); } catch(err) { toast('ไฟล์ไม่ถูกต้อง', true); } };
-  r.readAsText(f); e.target.value = '';
-}
 
+// ============ THAI TYPOGRAPHY FIX ============
 async function fixThaiTypography(blob) {
   if (!window.JSZip) return blob;
   try {
@@ -1079,6 +1558,7 @@ async function fixThaiTypography(blob) {
   } catch (e) { console.error('fixThaiTypography failed:', e); return blob; }
 }
 
+// ============ DOCX UTILS ============
 const { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell,
   WidthType, BorderStyle, ImageRun, TabStopType, VerticalAlign } = docx;
 
@@ -1186,80 +1666,14 @@ function sigR(name, position, date) {
     children: [new TextRun({ text: date, font: FONT, size: FS })] }));
   return arr;
 }
-function sigC(name, position, date) {
-  const arr = [
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE, before: 200 }, keepNext: true, keepLines: true, widowControl: false,
-      children: [new TextRun({ text: 'ลงชื่อ ...................................................', font: FONT, size: FS })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: true, keepLines: true, widowControl: false,
-      children: [new TextRun({ text: `(${name})`, font: FONT, size: FS })] }),
-  ];
-  if (position) arr.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: true, keepLines: true, widowControl: false,
-    children: [new TextRun({ text: position, font: FONT, size: FS })] }));
-  if (date) arr.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { line: LINE }, keepNext: false, keepLines: true, widowControl: false,
-    children: [new TextRun({ text: date, font: FONT, size: FS })] }));
-  return arr;
-}
-
 function menuLine(it) {
   const parts = [it.main];
-  if (it.veg && !it.main.includes(it.veg)) parts.push(it.veg);
   if (it.dessert) parts.push(it.dessert);
   if (it.fruit) parts.push(it.fruit);
   return parts.join(' + ');
 }
-function buildMenuTables() {
-  if (!state.schedule.length) return [p('(ยังไม่มีตารางอาหาร)', { align: AlignmentType.CENTER })];
-  const groups = [[],[],[],[],[]];
-  state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
-  const out = [];
-  groups.forEach((items, idx) => {
-    if (!items.length) return;
-    out.push(p(`รายการอาหารกลางวันในโรงเรียน${NBSP}ประจำงวดที่ ${toThaiDigits(idx+1)}`, { align: AlignmentType.CENTER, bold: true, before: 120, after: 60, keepNext: true }));
-    out.push(new Table({
-      width:{ size:100, type:WidthType.PERCENTAGE },
-      rows: [
-        new TableRow({ tableHeader: true, cantSplit: true, children: [
-          new TableCell({ width:{ size:22, type:WidthType.PERCENTAGE }, children:[p('วัน เดือน ปี', { align: AlignmentType.CENTER, bold: true })] }),
-          new TableCell({ width:{ size:78, type:WidthType.PERCENTAGE }, children:[p('รายการอาหาร', { align: AlignmentType.CENTER, bold: true })] }),
-        ]}),
-        ...items.map(it => new TableRow({ cantSplit: true, children: [
-          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(toThaiDateShort(it.date))] }),
-          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(menuLine(it))] }),
-        ]})),
-      ],
-    }));
-  });
-  return out;
-}
-function buildPeriodSummary() {
-  const groups = [[],[],[],[],[]];
-  state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
-  const MARG = { top: 60, bottom: 60, left: 120, right: 120 };
-  const rows = groups.map((items, i) => {
-    if (!items.length) return null;
-    const amount = items.length * state.settings.studentCount * state.settings.pricePerStudent;
-    return new TableRow({ cantSplit: true, children: [
-      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`งวดที่${NBSP}${toThaiDigits(i+1)}`)] }),
-      new TableCell({ width:{size:50,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}`)] }),
-      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDigits(items.length)}${NBSP}วัน`, { align: AlignmentType.CENTER })] }),
-      new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${thMoney(amount)}${NBSP}บาท`, { align: AlignmentType.RIGHT })] }),
-    ]});
-  }).filter(x=>x);
-  return [new Table({
-    width:{ size:100, type:WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({ tableHeader: true, cantSplit: true, children: [
-        new TableCell({ children:[p('งวด', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ children:[p('ระยะเวลา', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ children:[p('จำนวนวัน', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ children:[p('จำนวนเงิน', { align: AlignmentType.CENTER, bold: true })] }),
-      ]}),
-      ...rows,
-    ],
-  })];
-}
 
-// ===== Documents =====
+// ============ 12 DOCS ============
 function docTOR_Assignment() {
   const s = state.settings;
   const total = s.studentCount * s.pricePerStudent * s.totalDays;
@@ -1566,6 +1980,58 @@ function docAttachment() {
   ];
 }
 
+function buildMenuTables() {
+  if (!state.schedule.length) return [p('(ยังไม่มีตารางอาหาร)', { align: AlignmentType.CENTER })];
+  const groups = [[],[],[],[],[]];
+  state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+  const out = [];
+  groups.forEach((items, idx) => {
+    if (!items.length) return;
+    out.push(p(`รายการอาหารกลางวันในโรงเรียน${NBSP}ประจำงวดที่ ${toThaiDigits(idx+1)}`, { align: AlignmentType.CENTER, bold: true, before: 120, after: 60, keepNext: true }));
+    out.push(new Table({
+      width:{ size:100, type:WidthType.PERCENTAGE },
+      rows: [
+        new TableRow({ tableHeader: true, cantSplit: true, children: [
+          new TableCell({ width:{ size:22, type:WidthType.PERCENTAGE }, children:[p('วัน เดือน ปี', { align: AlignmentType.CENTER, bold: true })] }),
+          new TableCell({ width:{ size:78, type:WidthType.PERCENTAGE }, children:[p('รายการอาหาร', { align: AlignmentType.CENTER, bold: true })] }),
+        ]}),
+        ...items.map(it => new TableRow({ cantSplit: true, children: [
+          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(toThaiDateShort(it.date))] }),
+          new TableCell({ margins: { top: 40, bottom: 40, left: 100, right: 100 }, children:[p(menuLine(it))] }),
+        ]})),
+      ],
+    }));
+  });
+  return out;
+}
+function buildPeriodSummary() {
+  const groups = [[],[],[],[],[]];
+  state.schedule.forEach(it => { if (groups[it.period]) groups[it.period].push(it); });
+  const MARG = { top: 60, bottom: 60, left: 120, right: 120 };
+  const rows = groups.map((items, i) => {
+    if (!items.length) return null;
+    const amount = items.length * state.settings.studentCount * state.settings.pricePerStudent;
+    return new TableRow({ cantSplit: true, children: [
+      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`งวดที่${NBSP}${toThaiDigits(i+1)}`)] }),
+      new TableCell({ width:{size:50,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDateShort(items[0].date)} – ${toThaiDateShort(items[items.length-1].date)}`)] }),
+      new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${toThaiDigits(items.length)}${NBSP}วัน`, { align: AlignmentType.CENTER })] }),
+      new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(`${thMoney(amount)}${NBSP}บาท`, { align: AlignmentType.RIGHT })] }),
+    ]});
+  }).filter(x=>x);
+  return [new Table({
+    width:{ size:100, type:WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ tableHeader: true, cantSplit: true, children: [
+        new TableCell({ children:[p('งวด', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('ระยะเวลา', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('จำนวนวัน', { align: AlignmentType.CENTER, bold: true })] }),
+        new TableCell({ children:[p('จำนวนเงิน', { align: AlignmentType.CENTER, bold: true })] }),
+      ]}),
+      ...rows,
+    ],
+  })];
+}
+
 const DOCS = [
   { id: 'assign_tor', name: '1. หนังสือแต่งตั้งผู้จัดทำ TOR', build: docTOR_Assignment },
   { id: 'order_committee', name: '2. คำสั่ง ที่ 48 แต่งตั้งคณะกรรมการ', build: docCommitteeOrder },
@@ -1584,19 +2050,6 @@ const DOCS = [
 function renderDocuments() {
   const l = document.getElementById('docList'); if (!l) return;
   l.innerHTML = DOCS.map(d => `<button onclick="previewDoc('${d.id}')" class="w-full text-left px-4 py-2.5 rounded-lg border text-sm ${state.currentDoc===d.id?'bg-blue-50 border-blue-400 font-medium':'bg-white border-slate-200 hover:bg-slate-50'}">${d.name}</button>`).join('');
-  const setV = (id, v) => { const el = document.getElementById(id); if (el && !el.value) el.value = v; };
-  setV('foodNoteNum', state.settings.foodNoteNumber);
-  setV('foodNoteYear', state.settings.foodNoteYear);
-  setV('taxRateInput', state.settings.taxWithholdingRate);
-  const periodSel = document.getElementById('periodExportSelect');
-  if (periodSel) {
-    periodSel.innerHTML = [0,1,2,3,4].map(i => {
-      const cnt = state.schedule.filter(it => it.period === i).length;
-      return `<option value="${i}">งวดที่ ${toThaiDigits(i+1)} (${toThaiDigits(cnt)} วัน)</option>`;
-    }).join('');
-  }
-  const cnt = document.getElementById('foodListCount');
-  if (cnt) cnt.textContent = toThaiDigits(state.schedule.length);
   previewDoc(state.currentDoc);
 }
 function previewDoc(id) {
@@ -1681,17 +2134,19 @@ async function exportCurrentDocx() {
   const d = DOCS.find(x => x.id === state.currentDoc); if (!d) return;
   toast('กำลังสร้างไฟล์ Word...');
   try {
-    const document = new Document({
-      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
-      title: d.name, description: 'เอกสารจัดจ้างอาหารกลางวัน', revision: 1,
+    const doc = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน', title: d.name, revision: 1,
       styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
       sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } }, children: d.build() }],
     });
-    let blob = await Packer.toBlob(document);
+    let blob = await Packer.toBlob(doc);
     blob = await fixThaiTypography(blob);
-    saveAs(blob, `${d.name.replace(/^\d+\.\s*/, '')}.docx`);
-    toast('ดาวน์โหลดสำเร็จ');
-  } catch(e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
+    const filename = `${d.name.replace(/^\d+\.\s*/, '')}.docx`;
+    saveAs(blob, filename);
+    toast('ดาวน์โหลดแล้ว');
+    const up = await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
+    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); refreshFiles(); }
+  } catch(e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
 }
 async function exportAllDocs() {
   if (!state.schedule.length && !confirm('ยังไม่มีตารางอาหาร ดำเนินการต่อ?')) return;
@@ -1701,323 +2156,51 @@ async function exportAllDocs() {
       properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } },
       children: d.build(),
     }));
-    const document = new Document({
-      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
-      title: `เอกสารจัดจ้างรวม ${state.settings.schoolName} ${state.settings.year}`,
-      description: 'เอกสารจัดจ้างอาหารกลางวันรวม 12 ฉบับ', revision: 1,
+    const doc = new Document({
+      creator: 'ระบบจัดจ้างอาหารกลางวัน',
+      title: `เอกสารจัดจ้างรวม ${state.settings.schoolName} ${state.settings.year}`, revision: 1,
       styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
       sections,
     });
-    let blob = await Packer.toBlob(document);
+    let blob = await Packer.toBlob(doc);
     blob = await fixThaiTypography(blob);
-    saveAs(blob, `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`);
-    toast('ดาวน์โหลดสำเร็จ');
-  } catch (e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
+    const filename = `เอกสารจัดจ้างรวม-${state.settings.schoolName}-${state.settings.year}.docx`;
+    saveAs(blob, filename);
+    toast('ดาวน์โหลดแล้ว');
+    const up = await uploadWordToCloud(blob, filename, 'เอกสารจัดจ้าง');
+    if (up) { toast('อัปโหลดขึ้น Drive สำเร็จ'); refreshFiles(); }
+  } catch (e) { console.error(e); toast('ผิดพลาด: ' + e.message, true); }
 }
 
-function syncNewSettingsFromInputs() {
-  const g = (id) => document.getElementById(id);
-  state.settings.foodNoteNumber = g('foodNoteNum')?.value || state.settings.foodNoteNumber;
-  state.settings.foodNoteYear = Number(g('foodNoteYear')?.value || state.settings.foodNoteYear);
-  state.settings.taxWithholdingRate = Number(g('taxRateInput')?.value || state.settings.taxWithholdingRate);
-  saveState();
+// ============ REFRESH ALL ============
+function refreshAllUI() {
+  updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus();
+  renderPeriods(); renderSchedule(); renderDelivery(); renderDocuments();
+  renderGarudaPreview();
 }
 
-function buildFoodListExport() {
-  const s = state.settings;
-  if (!state.schedule.length) return [p('(ยังไม่มีตารางอาหาร)', { align: AlignmentType.CENTER })];
-  const children = [];
-  const MARG = { top: 60, bottom: 60, left: 100, right: 100 };
-  state.schedule.forEach((it, idx) => {
-    if (idx > 0) children.push(pageBreak());
-    const amount = s.studentCount * s.pricePerStudent;
-    const foodLines = [];
-    foodLines.push(...it.main.split(' + ').map(x => x.trim()).filter(Boolean));
-    if (it.veg && !it.main.includes(it.veg)) foodLines.push(it.veg);
-    if (it.dessert) foodLines.push(it.dessert);
-    if (it.fruit) foodLines.push(it.fruit);
-    children.push(p('ใบสรุปรายการประกอบอาหาร', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
-    children.push(p(`แนบท้ายใบส่งมอบงานเลขที่ ${toThaiDigits(s.foodNoteNumber)} / ${toThaiDigits(s.foodNoteYear)} ลงวันที่ ${toThaiDate(it.date)}`, { align: AlignmentType.CENTER, before: 120, keepNext: true }));
-    children.push(p(' ', { before: 60 }));
-    children.push(new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      rows: [
-        new TableRow({ tableHeader: true, cantSplit: true, children: [
-          new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('วัน/เดือน/ปี', { align: AlignmentType.CENTER, bold: true })] }),
-          new TableCell({ width:{size:38,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการอาหาร', { align: AlignmentType.CENTER, bold: true })] }),
-          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวน ชุด', { align: AlignmentType.CENTER, bold: true })] }),
-          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ราคาต่อ ชุด', { align: AlignmentType.CENTER, bold: true })] }),
-          new TableCell({ width:{size:14,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รวมเป็นเงิน', { align: AlignmentType.CENTER, bold: true })] }),
-        ]}),
-        new TableRow({ cantSplit: true, children: [
-          new TableCell({ margins: MARG, children: [p(toThaiDateShort(it.date))] }),
-          new TableCell({ margins: MARG, children: foodLines.map(f => p('- ' + f)) }),
-          new TableCell({ margins: MARG, children: [p(toThaiDigits(s.studentCount), { align: AlignmentType.CENTER })] }),
-          new TableCell({ margins: MARG, children: [p(toThaiDigits(s.pricePerStudent), { align: AlignmentType.CENTER })] }),
-          new TableCell({ margins: MARG, children: [p(thMoney(amount), { align: AlignmentType.RIGHT })] }),
-        ]}),
-      ],
-    }));
-    children.push(p(' ', { before: 60 }));
-    children.push(...twoSig(
-      ['....................................................', '....................................................', `(${s.contractorName})`, 'ผู้ส่ง', `วันที่ ${toThaiDate(it.date)}`],
-      ['....................................................', '....................................................', `(${s.receiverName})`, 'ผู้รับ', `วันที่ ${toThaiDate(it.date)}`]
-    ));
-  });
-  return children;
-}
-
-async function exportFoodListDocx() {
-  if (!state.schedule.length) { toast('ยังไม่มีตารางอาหาร', true); return; }
-  syncNewSettingsFromInputs();
-  toast('กำลังสร้างไฟล์ Word รายการอาหาร...');
-  try {
-    const document = new Document({
-      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
-      title: 'ใบสรุปรายการประกอบอาหาร', description: 'แนบท้ายใบส่งมอบงาน', revision: 1,
-      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
-      sections: [{
-        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } },
-        children: buildFoodListExport(),
-      }],
-    });
-    let blob = await Packer.toBlob(document);
-    blob = await fixThaiTypography(blob);
-    saveAs(blob, `รายการอาหาร-${state.settings.schoolName}-${state.settings.year}.docx`);
-    toast('ดาวน์โหลดสำเร็จ');
-  } catch (e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
-}
-
-function buildPeriodDocExport(periodNum) {
-  const s = state.settings;
-  const items = state.schedule.filter(it => it.period === periodNum);
-  if (!items.length) return [p(`(ยังไม่มีตารางอาหารในงวดที่ ${toThaiDigits(periodNum+1)})`, { align: AlignmentType.CENTER })];
-  const amount = items.length * s.studentCount * s.pricePerStudent;
-  const taxRate = Number(s.taxWithholdingRate) || 0;
-  const taxAmount = +(amount * taxRate / 100).toFixed(2);
-  const netAmount = +(amount - taxAmount).toFixed(2);
-  const periodThai = toThaiDigits(periodNum + 1);
-  const dateStart = items[0].date;
-  const dateEnd = items[items.length-1].date;
-  const MARG = { top: 60, bottom: 60, left: 100, right: 100 };
-  const children = [];
-
-  // (1) ใบส่งงาน
-  children.push(p(`ใบส่งงาน งวดที่ ${periodThai}`, { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
-  children.push(p(`เลขที่เอกสาร..............${toThaiDigits(s.foodNoteNumber)} / ${toThaiDigits(s.foodNoteYear)}.............. บริษัท/ห้าง/ร้าน..............${s.contractorName}..............`, { before: 240 }));
-  children.push(p(`ที่อยู่ ${toThaiDigits(s.contractorAddress)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 120 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(p(`นามผู้ว่าจ้าง     ${s.schoolName}`, { keepNext: true }));
-  children.push(p(`ที่อยู่  ${toThaiDigits(s.address)}`, { keepNext: true, before: 60 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({ tableHeader: true, cantSplit: true, children: [
-        new TableCell({ width:{size:10,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ลำดับ', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:60,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการ', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวน', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:15,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงิน', { align: AlignmentType.CENTER, bold: true })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p(toThaiDigits(1), { align: AlignmentType.CENTER })] }),
-        new TableCell({ margins: MARG, children:[p(`ค่าเหมาจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${periodThai}`)] }),
-        new TableCell({ margins: MARG, children:[p(`${toThaiDigits(items.length)} วัน`, { align: AlignmentType.CENTER })] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ columnSpan:3, margins: MARG, children:[p('รวมเป็นเงิน', { align: AlignmentType.RIGHT, bold: true })] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT, bold: true })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ columnSpan:3, margins: MARG, children:[p(`(จำนวนเงินตัวอักษร) ${formatMoneyThai(amount)}`, { bold: true })] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(amount), { align: AlignmentType.RIGHT, bold: true })] }),
-      ]}),
-    ],
-  }));
-  children.push(p(' ', { before: 200 }));
-  children.push(...twoSig(
-    ['....................................................', '....................................................', `(${s.contractorName})`, 'ผู้ส่ง', `วันที่ ${toThaiDate(dateEnd)}`],
-    ['....................................................', '....................................................', `(${s.receiverName})`, 'ผู้รับ', `วันที่ ${toThaiDate(dateEnd)}`]
-  ));
-
-  // (2) ใบตรวจรับพัสดุ
-  children.push(pageBreak());
-  children.push(p('ใบตรวจรับพัสดุ', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
-  children.push(p(`เขียนที่ ${s.schoolName}`, { align: AlignmentType.RIGHT, before: 120 }));
-  children.push(p(s.address, { align: AlignmentType.RIGHT, before: 60 }));
-  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(p(`ด้วย บริษัท/ห้างหุ้นส่วน/ร้าน/หน่วยงาน.....${s.contractorName}.....ได้ส่งมอบงานจ้างประกอบอาหาร ประจำภาคเรียนที่ ${toThaiDigits(s.semester)} ปีการศึกษา ${toThaiDigits(s.year)} งวดที่ ${periodThai} ตามใบสั่งจ้าง เลขที่ ${toThaiDigits(s.docNumberPO)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(s.issueDate)}`, { indent: { firstLine: INDENT } }));
-  children.push(p('เพื่อให้ ☐ ผู้ตรวจรับพัสดุ ☐ คณะกรรมการตรวจรับพัสดุ ทำการตรวจรับแล้ว ปรากฏผล ดังนี้', { indent: { firstLine: INDENT }, before: 120 }));
-  children.push(p(`1. ครบกำหนด วันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`2. ส่งมอบ วันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`3. ได้ตรวจรับพัสดุตามใบมอบงาน เลขที่ ${toThaiDigits(s.foodNoteNumber)} / ${toThaiDigits(s.foodNoteYear)} ลงวันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`4. ได้ตรวจรับและให้ถือว่าพัสดุ ☐ ถูกต้อง จำนวน ${toThaiDigits(items.length)} รายการ`, { indent: { firstLine: INDENT } }));
-  children.push(p('         ☐ ไม่ถูกต้อง จำนวน - รายการ', { indent: { firstLine: INDENT } }));
-  children.push(p(`ตั้งแต่วันที่ ${toThaiDate(dateStart)} ถึงวันที่ ${toThaiDate(dateEnd)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`เห็นสมควรให้จ่ายเงินค่าจ้างประกอบอาหาร งวดที่ ${periodThai} ให้แก่ ${s.contractorName} เป็นจำนวนเงินทั้งสิ้น ${thMoney(amount)} บาท (${formatMoneyThai(amount)})`, { indent: { firstLine: INDENT }, before: 120 }));
-  children.push(p(`จึงรายงานต่อผู้อำนวยการ${s.schoolName} เพื่อโปรดทราบผลการตรวจรับ ตามนัยข้อ 175`, { indent: { firstLine: INDENT }, before: 120, keepNext: true, keepLines: true }));
-  children.push(p(' ', { before: 240 }));
-  state.committee.forEach((c) => {
-    children.push(p(`ลงชื่อ....................................................${c.role || 'กรรมการ'}`, { align: AlignmentType.RIGHT, before: 200 }));
-    children.push(p(`(${c.name})`, { align: AlignmentType.RIGHT }));
-  });
-
-  // (3) บันทึกขออนุมัติ
-  children.push(pageBreak());
-  children.push(memoHeaderRow());
-  children.push(p('ส่วนราชการ' + NBSP + NBSP + s.schoolName, { before: 120 }));
-  children.push(rowLR(`ที่${NBSP}${NBSP}${toThaiDigits(s.foodNoteNumber)} / ${toThaiDigits(s.foodNoteYear)}`, `วันที่${NBSP}${NBSP}${toThaiDate(dateEnd)}`));
-  children.push(headUnderline('เรื่อง', 'รายงานผลการตรวจรับและขออนุมัติเบิกจ่ายเงิน'));
-  children.push(p('เรียน' + NBSP + NBSP + 'ผู้อำนวยการ' + s.schoolName, { before: 240 }));
-  children.push(p(`ตามที่${s.schoolName}ได้อนุมัติให้จัดจ้างเหมาประกอบอาหารกลางวัน (ปรุงสำเร็จ) กับ ${s.contractorName} งวดที่ ${periodThai} จำนวน ${toThaiDigits(items.length)} รายการ ตามใบสั่งจ้าง เลขที่ ${toThaiDigits(s.docNumberPO)} / ${toThaiDigits(s.year)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`บัดนี้ผู้ขายได้ส่งมอบพัสดุแล้ว ตามใบส่งของ เลขที่ ${toThaiDigits(s.foodNoteNumber)} / ${toThaiDigits(s.foodNoteYear)} ลงวันที่ ${toThaiDate(dateEnd)} และคณะกรรมการตรวจรับพัสดุได้ทำการตรวจรับพัสดุไว้ถูกต้องแล้ว`, { indent: { firstLine: INDENT }, before: 120 }));
-  children.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ width:{size:60,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงินตามสัญญา')] }),
-        new TableCell({ width:{size:40,type:WidthType.PERCENTAGE}, margins: MARG, children:[p(thMoney(amount) + ' บาท', { align: AlignmentType.RIGHT })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p('ค่าปรับ')] }),
-        new TableCell({ margins: MARG, children:[p('- บาท', { align: AlignmentType.RIGHT })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p(`หักภาษี ณ ที่จ่าย (${toThaiDigits(taxRate)}%)`)] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(taxAmount) + ' บาท', { align: AlignmentType.RIGHT })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p('คงจ่ายเงินจริง', { bold: true })] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(netAmount) + ' บาท', { align: AlignmentType.RIGHT, bold: true })] }),
-      ]}),
-    ],
-  }));
-  children.push(p(`(${formatMoneyThai(netAmount)})`, { align: AlignmentType.RIGHT, before: 60 }));
-  children.push(p('จึงเสนอเพื่อโปรดทราบผลการตรวจรับและขออนุมัติเบิกจ่ายต่อไป', { indent: { firstLine: INDENT }, before: 240 }));
-  children.push(p(' ', { before: 200 }));
-  children.push(p('ความเห็นเจ้าหน้าที่การเงิน', { bold: true, keepNext: true }));
-  children.push(p(`ได้ตรวจสอบหลักฐานแล้วมีเอกสารครบถ้วน`, { indent: { firstLine: INDENT } }));
-  children.push(p(`เห็นควรอนุมัติเบิกจ่ายเงิน งวดที่ ${periodThai} จำนวน ${thMoney(amount)} บาท (${formatMoneyThai(amount)}) ให้แก่ ${s.contractorName}`, { indent: { firstLine: INDENT }, before: 120 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(p('☐ ทราบ   ☐ อนุมัติ', { before: 120 }));
-  children.push(...sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`, toThaiDate(dateEnd)));
-
-  // (4) รายงานคณะกรรมการ
-  children.push(pageBreak());
-  children.push(p('บันทึกรายงานผู้ควบคุมและคณะกรรมการตรวจการประกอบอาหารกลางวัน', { align: AlignmentType.CENTER, bold: true, size: 32, keepNext: true }));
-  children.push(p(`เขียนที่ ${s.schoolName}`, { align: AlignmentType.RIGHT, before: 120 }));
-  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(p(`ตามที่${s.schoolName}ได้ตกลงจ้าง ${s.contractorName} ประกอบอาหารกลางวัน ตามบันทึกข้อตกลงจ้างเลขที่ ${toThaiDigits(s.docNumberPO)} / ${toThaiDigits(s.year)} ลงวันที่ ${toThaiDate(s.issueDate)} บัดนี้ผู้รับจ้างได้ส่งมอบพัสดุทุกวันตามข้อตกลง`, { indent: { firstLine: INDENT } }));
-  children.push(p(' ', { before: 120 }));
-  children.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({ tableHeader: true, cantSplit: true, children: [
-        new TableCell({ width:{size:18,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('วัน เดือน ปี', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:42,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการอาหารตาม TOR', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ผลการดำเนินงาน', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:20,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('ผู้ควบคุม/กรรมการ', { align: AlignmentType.CENTER, bold: true })] }),
-      ]}),
-      ...items.map(it => new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p(toThaiDateShort(it.date))] }),
-        new TableCell({ margins: MARG, children: menuLine(it).split(' + ').map(f => p('- ' + f)) }),
-        new TableCell({ margins: MARG, children:[p('ส่งมอบครบตามกำหนด')] }),
-        new TableCell({ margins: MARG, children:[p('')] }),
-      ]})),
-    ],
-  }));
-  children.push(p(' ', { before: 240 }));
-  children.push(p('ความเห็นของผู้อำนวยการสถานศึกษา', { bold: true, keepNext: true }));
-  children.push(p('☐ ทราบผลการดำเนินการ', { indent: { firstLine: INDENT } }));
-  children.push(...sigR(s.directorName, `ผู้อำนวยการ${s.schoolName}`));
-
-  // (5) ใบสำคัญรับเงิน
-  children.push(pageBreak());
-  children.push(p('ใบสำคัญรับเงิน', { align: AlignmentType.CENTER, bold: true, size: 36, keepNext: true }));
-  children.push(p(`ที่  ${s.receiptNumber || 'บก.34'} / ${toThaiDigits(s.foodNoteYear)}`, { align: AlignmentType.RIGHT, before: 120 }));
-  children.push(p(`วันที่ ${toThaiDate(dateEnd)}`, { align: AlignmentType.RIGHT, before: 60 }));
-  children.push(p(' ', { before: 120 }));
-  children.push(p(`ข้าพเจ้า  ${s.contractorName}  อยู่บ้านเลขที่  ${toThaiDigits(s.contractorAddress)}`, { indent: { firstLine: INDENT } }));
-  children.push(p(`ได้รับเงินจาก  ${s.schoolName}  ดังรายการต่อไปนี้`, { indent: { firstLine: INDENT }, before: 120 }));
-  children.push(new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    rows: [
-      new TableRow({ tableHeader: true, cantSplit: true, children: [
-        new TableCell({ width:{size:70,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('รายการ', { align: AlignmentType.CENTER, bold: true })] }),
-        new TableCell({ width:{size:30,type:WidthType.PERCENTAGE}, margins: MARG, children:[p('จำนวนเงิน : บาท', { align: AlignmentType.CENTER, bold: true })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children: [
-          p(`ได้รับเงินค่าจ้างเหมาประกอบอาหารปรุงสำเร็จ อาหารกลางวัน งวดที่ ${periodThai}`),
-          p(`${toThaiDigits(s.studentCount)} คน X ${toThaiDigits(s.pricePerStudent)} บาท X ${toThaiDigits(items.length)} วัน`),
-        ]}),
-        new TableCell({ margins: MARG, children:[p(thMoney(amount) + '.-', { align: AlignmentType.RIGHT })] }),
-      ]}),
-      new TableRow({ cantSplit: true, children: [
-        new TableCell({ margins: MARG, children:[p(`(ตัวอักษร) (${formatMoneyThai(amount)}) รวมเงินทั้งสิ้น`, { bold: true })] }),
-        new TableCell({ margins: MARG, children:[p(thMoney(amount) + '.-', { align: AlignmentType.RIGHT, bold: true })] }),
-      ]}),
-    ],
-  }));
-  children.push(p(' ', { before: 240 }));
-  children.push(...twoSig(
-    ['ลงชื่อ......................................................ผู้รับเงิน', `(${s.contractorName})`],
-    ['ลงชื่อ......................................................ผู้จ่ายเงิน', `(${s.receiverName})`]
-  ));
-
-  return children;
-}
-
-async function exportPeriodDocx() {
-  const sel = document.getElementById('periodExportSelect');
-  const periodNum = sel ? Number(sel.value) : 0;
-  const items = state.schedule.filter(it => it.period === periodNum);
-  if (!items.length) { toast(`ยังไม่มีตารางอาหารในงวดที่ ${toThaiDigits(periodNum+1)}`, true); return; }
-  syncNewSettingsFromInputs();
-  toast(`กำลังสร้างเอกสารงวดที่ ${toThaiDigits(periodNum+1)}...`);
-  try {
-    const document = new Document({
-      creator: 'ระบบจัดจ้างอาหารกลางวัน โรงเรียนบ้านถิ่นสำราญ',
-      title: `เอกสารงวดที่ ${toThaiDigits(periodNum+1)}`,
-      description: 'ใบส่งงาน + ใบตรวจรับ + บันทึก + รายงาน + ใบสำคัญรับเงิน', revision: 1,
-      styles: { default: { document: { run: { font: FONT, size: FS }, paragraph: { spacing: { line: LINE } } } } },
-      sections: [{
-        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1417, right: 1134 } } },
-        children: buildPeriodDocExport(periodNum),
-      }],
-    });
-    let blob = await Packer.toBlob(document);
-    blob = await fixThaiTypography(blob);
-    saveAs(blob, `เอกสารงวดที่-${periodNum+1}-${state.settings.schoolName}-${state.settings.year}.docx`);
-    toast('ดาวน์โหลดสำเร็จ');
-  } catch (e) { console.error(e); toast('เกิดข้อผิดพลาด: ' + (e?.message||e), true); }
-}
-
-// ============ Auto-close drawer on resize ============
-let resizeTimer;
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => {
-    if (window.innerWidth >= 1024) closeDrawer();
-  }, 100);
-});
-
-// ============ Init ============
+// ============ INIT ============
 window.addEventListener('DOMContentLoaded', async () => {
   buildSettingsForm(); updateDashboard(); fillSettingsForm(); renderCommittee(); renderMenus();
   await loadGarudaFromURL();
-  renderGarudaPreview(); renderDocuments(); renderMenuEditor();
+  renderGarudaPreview(); renderDocuments(); renderDelivery();
   if (Object.keys(state.periodAssignments).length === 0) {
-    const days = buildWorkingDays();
-    const counts = [10, 8, 10, 10, 12];
-    let idx = 0;
-    counts.forEach((cnt, i) => { for (let k = 0; k < cnt && idx < days.length; k++) { state.periodAssignments[days[idx]] = i; idx++; } });
-    saveState();
+    autoAssignPeriods();
   }
+  // ทดสอบการเชื่อมต่อ Cloud อัตโนมัติ
+  if (APPS_SCRIPT_URL) {
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=ping');
+      const data = await res.json();
+      if (data.ok) { updateConnUI('ok'); }
+    } catch(e) { updateConnUI('off'); }
+  }
+  // โหลดไฟล์จาก Cloud
+  if (APPS_SCRIPT_URL) refreshFiles();
+});
+
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 1024) closeDrawer();
 });
 </script>
 </body>
