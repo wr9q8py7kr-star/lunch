@@ -515,86 +515,87 @@ function importBackup(e) {
 }
 
 /* ============================================================
-   THAI TYPOGRAPHY FIX — kinsoku + LEFT align
+   ★★★ THAI TYPOGRAPHY FIX — noProof + clean settings
    ============================================================ */
 async function fixThaiTypography(blob) {
-  if (!window.JSZip) {
-    console.warn('JSZip ไม่โหลด — ข้าม Thai fix');
-    return blob;
-  }
+  if (!window.JSZip) return blob;
   try {
     const ab = await blob.arrayBuffer();
     const zip = await JSZip.loadAsync(ab);
     let fixCount = 0;
 
-    const docFile = zip.file('word/document.xml');
-    if (docFile) {
-      let xml = await docFile.async('string');
-
-      // เพิ่ม kinsoku / overflowPunct / autoSpace ให้ทุก paragraph
-      const before1 = xml;
-      xml = xml.replace(
-        /<w:pPr>(?![\s\S]{0,300}?<w:kinsoku)/g,
-        '<w:pPr><w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/>'
-      );
-      if (xml !== before1) fixCount++;
-
-      // ปิด snapToGrid (ให้ระยะบรรทัดยืดหยุ่น)
-      const before3 = xml;
-      xml = xml.replace(
-        /<w:pPr>([\s\S]{0,200}?)<w:spacing/g,
-        '<w:pPr>$1<w:snapToGrid w:val="0"/><w:spacing'
-      );
-      if (xml !== before3) fixCount++;
-
-      zip.file('word/document.xml', xml);
-    }
-
+    // ─── 1. styles.xml — noProof + lang ไทย ใน rPrDefault ───
     const stylesFile = zip.file('word/styles.xml');
     if (stylesFile) {
       let xml = await stylesFile.async('string');
-
-      // ตั้งภาษาไทยเป็น default
-      if (!/w:bidi="th-TH"/.test(xml)) {
+      if (!/w:noProof/.test(xml)) {
         const before = xml;
         if (/<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/.test(xml)) {
           xml = xml.replace(
             /<w:rPrDefault>\s*<w:rPr\s*\/>\s*<\/w:rPrDefault>/,
-            '<w:rPrDefault><w:rPr><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault>'
+            '<w:rPrDefault><w:rPr><w:noProof/><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault>'
           );
         } else if (/<w:rPrDefault>\s*<w:rPr>/.test(xml)) {
           xml = xml.replace(
             /<w:rPrDefault>\s*<w:rPr>/,
-            '<w:rPrDefault><w:rPr><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/>'
+            '<w:rPrDefault><w:rPr><w:noProof/><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/>'
+          );
+        } else {
+          xml = xml.replace(
+            /<\/w:docDefaults>/,
+            '<w:rPrDefault><w:rPr><w:noProof/><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr></w:rPrDefault></w:docDefaults>'
           );
         }
         if (xml !== before) fixCount++;
       }
-
-      // kinsoku default ใน docDefaults
-      if (!/<w:kinsoku\/>/.test(xml)) {
-        const before = xml;
-        xml = xml.replace(
-          /<w:pPrDefault>/,
-          '<w:pPrDefault><w:pPr><w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/></w:pPr>'
-        );
-        if (xml !== before) fixCount++;
-      }
-
       zip.file('word/styles.xml', xml);
     }
 
+    // ─── 2. document.xml — noProof ทุก run + jc=left ───
+    const docFile = zip.file('word/document.xml');
+    if (docFile) {
+      let xml = await docFile.async('string');
+
+      // เพิ่ม noProof + lang ในทุก <w:rPr> ที่ยังไม่มี
+      const before1 = xml;
+      xml = xml.replace(
+        /<w:rPr>(?![\s\S]{0,300}?<w:noProof)/g,
+        '<w:rPr><w:noProof/><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/>'
+      );
+      if (xml !== before1) fixCount++;
+
+      // run ที่ไม่มี rPr → ใส่ rPr ใหม่
+      const before2 = xml;
+      xml = xml.replace(
+        /<w:r>(?![\s\S]{0,200}?<w:rPr)/g,
+        '<w:r><w:rPr><w:noProof/><w:lang w:val="en-US" w:eastAsia="th-TH" w:bidi="th-TH"/></w:rPr>'
+      );
+      if (xml !== before2) fixCount++;
+
+      // ลบ snapToGrid
+      const before3 = xml;
+      xml = xml.replace(/<w:snapToGrid[^\/]*\/>/g, '');
+      if (xml !== before3) fixCount++;
+
+      // บังคับ jc = left
+      const before4 = xml;
+      xml = xml.replace(/<w:jc w:val="(both|thaiDistribute)"\s*\/>/g, '<w:jc w:val="left"/>');
+      if (xml !== before4) fixCount++;
+
+      zip.file('word/document.xml', xml);
+    }
+
+    // ─── 3. settings.xml — ล้าง setting แปลกๆ ───
     const settingsFile = zip.file('word/settings.xml');
     if (settingsFile) {
       let xml = await settingsFile.async('string');
-      if (!/<w:kinsoku\/>/.test(xml)) {
-        const before = xml;
-        xml = xml.replace(
-          /(<w:settings[^>]*>)/,
-          '$1<w:kinsoku/><w:overflowPunct w:val="0"/><w:autoSpaceDE w:val="0"/><w:autoSpaceDN w:val="0"/><w:noPunctuationKerning/><w:characterSpacingControl w:val="compressPunctuation"/>'
-        );
-        if (xml !== before) fixCount++;
-      }
+      const before = xml;
+      xml = xml.replace(/<w:kinsoku\s*\/>/g, '');
+      xml = xml.replace(/<w:overflowPunct[^\/]*\/>/g, '');
+      xml = xml.replace(/<w:autoSpaceDE[^\/]*\/>/g, '');
+      xml = xml.replace(/<w:autoSpaceDN[^\/]*\/>/g, '');
+      xml = xml.replace(/<w:noPunctuationKerning\s*\/>/g, '');
+      if (xml !== before) fixCount++;
       zip.file('word/settings.xml', xml);
     }
 
@@ -637,12 +638,8 @@ function p(text, opts={}) {
   const spacing = { line: LINE };
   if (opts.after != null) spacing.after = opts.after;
   if (opts.before != null) spacing.before = opts.before;
-  let align = opts.align;
-  if (!align) {
-    // ★ ใช้ LEFT เสมอ — ไม่เกลี่ยช่องว่าง
-    if (opts.indent && text && text.length > 40) align = AlignmentType.LEFT;
-    else align = AlignmentType.LEFT;
-  }
+  // ★ ใช้ LEFT เสมอ — ไม่ว่าจะมี indent หรือไม่
+  const align = opts.align || AlignmentType.LEFT;
   return new Paragraph({
     alignment: align,
     spacing,
@@ -656,13 +653,8 @@ function pMix(segments, opts={}) {
   const spacing = { line: LINE };
   if (opts.after != null) spacing.after = opts.after;
   if (opts.before != null) spacing.before = opts.before;
-  let align = opts.align;
-  if (!align) {
-    const totalLen = segments.reduce((s,x) => s + (x.text||'').length, 0);
-    // ★ ใช้ LEFT เสมอ
-    if (opts.indent && totalLen > 40) align = AlignmentType.LEFT;
-    else align = AlignmentType.LEFT;
-  }
+  // ★ ใช้ LEFT เสมอ
+  const align = opts.align || AlignmentType.LEFT;
   return new Paragraph({
     alignment: align,
     spacing,
